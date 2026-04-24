@@ -5,7 +5,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
-  const { totalQty, setIsOpen } = useCart();
+  const { items, setIsOpen } = useCart();
+  const itemCount = items.length;
   const { isAdmin } = useAuth();
   const { pathname, hash } = useLocation();
 
@@ -69,9 +70,9 @@ const Navbar = () => {
           >
             <ShoppingCart className="w-4 h-4" />
             <span className="hidden xs:inline">Cart</span>
-            {totalQty > 0 && (
+            {itemCount > 0 && (
               <span className="bg-white text-[#B93826] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {totalQty % 1 === 0 ? totalQty : totalQty.toFixed(1)}
+                {itemCount}
               </span>
             )}
           </button>
