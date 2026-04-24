@@ -16,11 +16,31 @@ const CheckoutDialog = ({ open, onClose }) => {
 
   if (!open) return null;
 
-  const captureLocation = () => {
+  const captureLocation = async () => {
     if (!navigator.geolocation) {
-      toast({ title: 'Geolocation unavailable', description: 'Enter your address manually.' });
+      toast({
+        title: 'Geolocation not supported',
+        description: 'Your browser doesn\'t support location. Enter your address manually below.',
+      });
       return;
     }
+
+    // Check current permission state (if Permissions API supported)
+    try {
+      if (navigator.permissions?.query) {
+        const perm = await navigator.permissions.query({ name: 'geolocation' });
+        if (perm.state === 'denied') {
+          toast({
+            title: 'Location blocked in browser',
+            description:
+              'Tap the 🔒 padlock in address bar → Site settings → Location → Allow. Then reload this page.',
+          });
+          setGeoStatus('error');
+          return;
+        }
+      }
+    } catch (_) {}
+
     setGeoStatus('loading');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -30,9 +50,17 @@ const CheckoutDialog = ({ open, onClose }) => {
       },
       (err) => {
         setGeoStatus('error');
-        toast({ title: 'Location denied', description: err.message || 'Please enter your address.' });
+        const msg =
+          err.code === 1
+            ? 'You blocked location. Tap the padlock in address bar → allow location → reload.'
+            : err.code === 2
+            ? 'Could not determine location. Check GPS/internet and try again.'
+            : err.code === 3
+            ? 'Location request timed out. Try again or enter address manually.'
+            : err.message || 'Please enter your address manually.';
+        toast({ title: 'Location unavailable', description: msg });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   };
 
@@ -191,30 +219,53 @@ const CheckoutDialog = ({ open, onClose }) => {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={captureLocation}
-              disabled={geoStatus === 'loading'}
-              className={`w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                location
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
-                  : 'border-[#B93826] text-[#B93826] hover:bg-[#B93826]/5'
-              }`}
-            >
-              {geoStatus === 'loading' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Getting location…
-                </>
-              ) : location ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" /> Location captured ({location.lat.toFixed(4)}, {location.lng.toFixed(4)})
-                </>
-              ) : (
-                <>
-                  <MapPin className="w-4 h-4" /> Share my live location (for rider)
-                </>
+            <div className="rounded-xl border-2 border-dashed border-[#B93826]/40 bg-[#B93826]/5 p-4">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-[#B93826] mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-[#2A1A14]">Share live location</div>
+                  <div className="text-xs text-[#7B5A48] mt-0.5">
+                    Your browser will ask for permission. Rider uses this to reach you faster.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={captureLocation}
+                disabled={geoStatus === 'loading'}
+                className={`mt-3 w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                  location
+                    ? 'bg-emerald-600 text-white'
+                    : geoStatus === 'error'
+                    ? 'bg-white border border-[#B93826] text-[#B93826]'
+                    : 'bg-[#B93826] hover:bg-[#A02E1F] text-white'
+                }`}
+              >
+                {geoStatus === 'loading' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Waiting for permission…
+                  </>
+                ) : location ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" /> Location shared ({location.lat.toFixed(4)}, {location.lng.toFixed(4)})
+                  </>
+                ) : geoStatus === 'error' ? (
+                  <>
+                    <MapPin className="w-4 h-4" /> Try again
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4" /> Allow location access
+                  </>
+                )}
+              </button>
+              {geoStatus === 'error' && (
+                <div className="mt-2 text-[11px] text-[#7B5A48] leading-relaxed">
+                  Blocked? Tap the 🔒 padlock icon in your browser's address bar → <b>Site settings</b> →{' '}
+                  <b>Location</b> → <b>Allow</b>, then reload. Or just type the address above.
+                </div>
               )}
-            </button>
+            </div>
 
             <div className="rounded-xl bg-[#F3EADB] p-4">
               <div className="text-xs text-[#7B5A48] mb-2">Order summary</div>
