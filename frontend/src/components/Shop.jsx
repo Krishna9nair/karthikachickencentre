@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Minus, Trash2 } from 'lucide-react';
-import { api } from '../lib/api';
+import { Plus, Minus, Trash2, RefreshCw } from 'lucide-react';
+import { fetchPublicProducts } from '../lib/publicData';
 import { useCart } from '../context/CartContext';
 
 const STEP = 0.25;
@@ -86,15 +86,18 @@ const ProductCard = ({ product }) => {
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('loading'); // loading | ready | error
 
-  useEffect(() => {
-    api
-      .get('/public/products')
-      .then((r) => setProducts(r.data.products || []))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const load = () => {
+    setStatus('loading');
+    fetchPublicProducts()
+      .then((list) => {
+        setProducts(list);
+        setStatus('ready');
+      })
+      .catch(() => setStatus('error'));
+  };
+  useEffect(() => { load(); }, []);
 
   return (
     <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
@@ -107,11 +110,24 @@ const Shop = () => {
           </p>
         </div>
 
-        {loading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {status === 'loading' ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="shop-loading">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="h-52 rounded-2xl bg-white border border-[#EADFCF] animate-pulse" />
             ))}
+          </div>
+        ) : status === 'error' ? (
+          <div className="text-center py-10" data-testid="shop-error">
+            <div className="text-[#7B5A48] mb-4">
+              Couldn't load products. Check your connection.
+            </div>
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium shadow-sm transition-colors"
+              data-testid="shop-retry-btn"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry
+            </button>
           </div>
         ) : products.length === 0 ? (
           <div className="text-center text-[#7B5A48]">No products available right now.</div>

@@ -1,18 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
-import { api } from '../lib/api';
+import { Star, RefreshCw } from 'lucide-react';
+import { fetchPublicProducts } from '../lib/publicData';
 
 const TodayPrice = () => {
   const [products, setProducts] = useState([]);
+  const [status, setStatus] = useState('loading'); // loading | ready | error
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
 
-  useEffect(() => {
-    api.get('/public/products').then((r) => setProducts(r.data.products || [])).catch(() => {});
-  }, []);
+  const load = () => {
+    setStatus('loading');
+    fetchPublicProducts()
+      .then((list) => {
+        setProducts(list);
+        setStatus('ready');
+      })
+      .catch(() => setStatus('error'));
+  };
+  useEffect(() => { load(); }, []);
 
   return (
     <section id="price" className="bg-[#FAF4EC] py-10 md:py-20">
@@ -39,8 +47,27 @@ const TodayPrice = () => {
             </div>
           </div>
 
-          {products.length === 0 ? (
-            <div className="text-center py-8 text-[#FBE8BE]/70">Loading today's board…</div>
+          {status === 'loading' ? (
+            <div className="text-center py-8 text-[#FBE8BE]/70" data-testid="today-price-loading">
+              Loading today's board…
+            </div>
+          ) : status === 'error' ? (
+            <div className="text-center py-8 relative" data-testid="today-price-error">
+              <div className="text-[#FBE8BE]/90 text-sm">
+                Couldn't reach the board. Check your connection.
+              </div>
+              <button
+                onClick={load}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#F3B43E]/60 text-[#F3B43E] hover:bg-[#F3B43E]/10 transition-colors text-sm"
+                data-testid="today-price-retry-btn"
+              >
+                <RefreshCw className="w-4 h-4" /> Retry
+              </button>
+            </div>
+          ) : products.filter((p) => p.price != null).length === 0 ? (
+            <div className="text-center py-8 text-[#FBE8BE]/70">
+              No prices published yet for today.
+            </div>
           ) : (
             <ul className="divide-y divide-[#C47B4A]/20 relative">
               {products
