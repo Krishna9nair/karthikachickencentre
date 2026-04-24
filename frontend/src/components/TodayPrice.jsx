@@ -15,9 +15,9 @@ const TodayPrice = () => {
   }, []);
 
   return (
-    <section id="price" className="bg-[#FAF4EC] py-16 md:py-24">
+    <section id="price" className="bg-[#FAF4EC] py-10 md:py-20">
       <div className="max-w-5xl mx-auto px-5 md:px-8">
-        <div className="text-center mb-10">
+        <div className="text-center mb-6 md:mb-10">
           <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
             DAILY BOARD
           </div>
@@ -25,7 +25,7 @@ const TodayPrice = () => {
           <div className="mt-2 text-sm text-[#7B5A48]">{today}</div>
         </div>
 
-        <div className="rounded-2xl bg-gradient-to-b from-[#3A1F13] to-[#2A140A] border-2 border-[#C47B4A] shadow-xl p-6 md:p-10 relative overflow-hidden">
+        <div className="rounded-2xl bg-gradient-to-b from-[#3A1F13] to-[#2A140A] border-2 border-[#C47B4A] shadow-xl p-4 md:p-10 relative overflow-hidden">
           <div className="absolute inset-2 border border-[#C47B4A]/40 rounded-xl pointer-events-none" />
 
           <div className="flex items-center justify-between pb-4 border-b border-[#C47B4A]/30 mb-4 relative">
@@ -48,7 +48,7 @@ const TodayPrice = () => {
                 .map((p) => (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between py-4 hover:bg-white/5 px-2 rounded-lg transition-colors"
+                    className="flex items-center justify-between py-3 md:py-4 hover:bg-white/5 px-2 rounded-lg transition-colors"
                   >
                     <span className="font-serif text-lg md:text-xl text-[#FBE8BE]">{p.name}</span>
                     <span className="font-serif text-xl md:text-2xl font-bold text-[#F3B43E]">

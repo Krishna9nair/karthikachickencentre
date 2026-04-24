@@ -9,7 +9,7 @@ const Hero = () => {
 
   return (
     <section className="relative overflow-hidden bg-[#FAF4EC]">
-      <div className="max-w-7xl mx-auto px-5 md:px-8 py-12 md:py-20 grid md:grid-cols-2 gap-10 md:gap-14 items-center">
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-20 grid md:grid-cols-2 gap-8 md:gap-14 items-center">
         <div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F4E4D1] border border-[#EAD1B5]">
             <Sparkles className="w-3.5 h-3.5 text-[#B93826]" />
@@ -18,17 +18,17 @@ const Hero = () => {
             </span>
           </div>
 
-          <h1 className="mt-6 font-serif text-[#2A1A14] leading-[1.05] text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="mt-4 md:mt-6 font-serif text-[#2A1A14] leading-[1.05] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
             Farm-fresh chicken,
             <br />
             <span className="text-[#B93826] italic">priced honest.</span>
           </h1>
 
-          <p className="mt-6 text-[17px] text-[#6B4E3D] max-w-md leading-relaxed">
+          <p className="mt-4 md:mt-6 text-[15px] md:text-[17px] text-[#6B4E3D] max-w-md leading-relaxed">
             Today's prices on the board, pay easy with UPI, and we'll have your order ready before you reach the shop.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-5 md:mt-8 flex flex-wrap gap-3">
             <button
               onClick={() => scrollTo('shop')}
               className="px-6 py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium shadow-sm transition-colors"
@@ -43,18 +43,18 @@ const Hero = () => {
             </button>
           </div>
 
-          <div className="mt-12 pt-6 border-t border-[#EADFCF] grid grid-cols-3 gap-6 max-w-md">
+          <div className="mt-6 md:mt-12 pt-5 md:pt-6 border-t border-[#EADFCF] grid grid-cols-3 gap-4 md:gap-6 max-w-md">
             <div>
-              <div className="font-serif text-2xl font-bold text-[#B93826]">100%</div>
-              <div className="text-xs text-[#7B5A48] mt-1">Locally sourced</div>
+              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">100%</div>
+              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">Locally sourced</div>
             </div>
             <div>
-              <div className="font-serif text-2xl font-bold text-[#B93826]">Daily</div>
-              <div className="text-xs text-[#7B5A48] mt-1">Fresh stock</div>
+              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">Daily</div>
+              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">Fresh stock</div>
             </div>
             <div>
-              <div className="font-serif text-2xl font-bold text-[#B93826]">UPI</div>
-              <div className="text-xs text-[#7B5A48] mt-1">Easy payment</div>
+              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">UPI</div>
+              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">Easy payment</div>
             </div>
           </div>
         </div>

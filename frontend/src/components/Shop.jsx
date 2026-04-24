@@ -21,7 +21,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:shadow-md hover:border-[#B93826]/30 transition-all duration-200">
+    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:shadow-md hover:border-[#B93826]/30 transition-all duration-200">
       {product.image_url && (
         <div className="mb-4 aspect-video rounded-lg overflow-hidden bg-[#F3EADB]">
           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -97,9 +97,9 @@ const Shop = () => {
   }, []);
 
   return (
-    <section id="shop" className="bg-[#FAF4EC] py-16 md:py-24">
+    <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
       <div className="max-w-6xl mx-auto px-5 md:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">OUR CUTS</div>
           <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">Pick your pieces</h2>
           <p className="mt-3 text-[#7B5A48] max-w-xl mx-auto">
