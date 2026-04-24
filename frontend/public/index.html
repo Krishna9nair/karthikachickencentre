@@ -13,5 +13,31 @@
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
         <div id="root"></div>
+        <script>
+          (function() {
+            const kill = () => {
+              document.querySelectorAll('#emergent-badge, a[href*="emergent"]').forEach((el) => {
+                try { el.remove(); } catch (e) {}
+              });
+              document.querySelectorAll('script[src*="emergent"]').forEach((el) => {
+                try { el.remove(); } catch (e) {}
+              });
+            };
+            kill();
+            if (document.body) {
+              new MutationObserver(kill).observe(document.body, { childList: true, subtree: true });
+            } else {
+              document.addEventListener('DOMContentLoaded', () => {
+                new MutationObserver(kill).observe(document.body, { childList: true, subtree: true });
+              });
+            }
+            // Fallback: also run every second for 30s in case observer misses
+            let n = 0;
+            const t = setInterval(() => { kill(); if (++n > 30) clearInterval(t); }, 1000);
+          })();
+        </script>
+        <style>
+          #emergent-badge, a[href*="emergent"] { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+        </style>
     </body>
 </html>
