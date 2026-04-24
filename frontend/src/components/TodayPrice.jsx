@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
-import { PRODUCTS } from '../data/mock';
+import { api } from '../lib/api';
 
 const TodayPrice = () => {
+  const [products, setProducts] = useState([]);
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
+
+  useEffect(() => {
+    api.get('/public/products').then((r) => setProducts(r.data.products || [])).catch(() => {});
+  }, []);
 
   return (
     <section id="price" className="bg-[#FAF4EC] py-16 md:py-24">
@@ -16,9 +21,7 @@ const TodayPrice = () => {
           <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
             DAILY BOARD
           </div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">
-            Today's Price
-          </h2>
+          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">Today's Price</h2>
           <div className="mt-2 text-sm text-[#7B5A48]">{today}</div>
         </div>
 
@@ -36,21 +39,25 @@ const TodayPrice = () => {
             </div>
           </div>
 
-          <ul className="divide-y divide-[#C47B4A]/20 relative">
-            {PRODUCTS.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between py-4 group hover:bg-white/5 px-2 rounded-lg transition-colors"
-              >
-                <span className="font-serif text-lg md:text-xl text-[#FBE8BE]">
-                  {p.name}
-                </span>
-                <span className="font-serif text-xl md:text-2xl font-bold text-[#F3B43E]">
-                  ₹{p.price}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {products.length === 0 ? (
+            <div className="text-center py-8 text-[#FBE8BE]/70">Loading today's board…</div>
+          ) : (
+            <ul className="divide-y divide-[#C47B4A]/20 relative">
+              {products
+                .filter((p) => p.price != null)
+                .map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between py-4 hover:bg-white/5 px-2 rounded-lg transition-colors"
+                  >
+                    <span className="font-serif text-lg md:text-xl text-[#FBE8BE]">{p.name}</span>
+                    <span className="font-serif text-xl md:text-2xl font-bold text-[#F3B43E]">
+                      ₹{p.price}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
         </div>
 
         <p className="text-center text-xs text-[#7B5A48] mt-5 italic">

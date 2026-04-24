@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate, Link } from 'react-router-dom';
+import {
+  LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
+  ClipboardList, Package, TrendingUp, ImageIcon, Loader2,
+} from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
-import { PRODUCTS, MOCK_ORDERS } from '../data/mock';
-import { ClipboardList, Package, IndianRupee, TrendingUp, Edit2, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
+import { api } from '../lib/api';
+import { useToast } from '../hooks/use-toast';
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const StatCard = ({ icon: Icon, label, value, sub }) => (
   <div className="bg-white border border-[#EADFCF] rounded-2xl p-5">
@@ -19,111 +28,382 @@ const StatCard = ({ icon: Icon, label, value, sub }) => (
 );
 
 const Admin = () => {
-  const [prices, setPrices] = useState(PRODUCTS.map((p) => ({ ...p })));
-  const [editingId, setEditingId] = useState(null);
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const { session, isAdmin, loading, signOut } = useAuth();
+  const { toast } = useToast();
 
-  const updatePrice = (id, newPrice) => {
-    setPrices((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, price: parseInt(newPrice) || 0 } : p))
+  const [products, setProducts] = useState([]);
+  const [priceMap, setPriceMap] = useState({}); // product_id -> price
+  const [orders, setOrders] = useState([]);
+  const [editingPrice, setEditingPrice] = useState(null);
+  const [priceInput, setPriceInput] = useState('');
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: '', description: '', unit: 'kg' });
+  const [uploading, setUploading] = useState(null);
+
+  useEffect(() => {
+    if (session && isAdmin) loadAll();
+  }, [session, isAdmin]);
+
+  const loadAll = async () => {
+    await Promise.all([loadProducts(), loadOrders()]);
+  };
+
+  const loadProducts = async () => {
+    const [{ data: prods }, { data: prices }] = await Promise.all([
+      supabase.from('products').select('*').order('sort_order'),
+      supabase.from('daily_prices').select('*').eq('price_date', todayISO()),
+    ]);
+    setProducts(prods || []);
+    const pm = {};
+    (prices || []).forEach((p) => (pm[p.product_id] = Number(p.price_per_unit)));
+    // fallback to latest price if today's not set
+    const missing = (prods || []).filter((p) => !(p.id in pm)).map((p) => p.id);
+    if (missing.length) {
+      const { data: latest } = await supabase
+        .from('daily_prices')
+        .select('*')
+        .in('product_id', missing)
+        .order('price_date', { ascending: false });
+      (latest || []).forEach((p) => {
+        if (!(p.product_id in pm)) pm[p.product_id] = Number(p.price_per_unit);
+      });
+    }
+    setPriceMap(pm);
+  };
+
+  const loadOrders = async () => {
+    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    setOrders(data || []);
+  };
+
+  const savePrice = async (product_id) => {
+    const price = parseFloat(priceInput);
+    if (isNaN(price) || price < 0) {
+      toast({ title: 'Invalid price' });
+      return;
+    }
+    const { error } = await supabase.from('daily_prices').upsert(
+      { product_id, price_per_unit: price, price_date: todayISO() },
+      { onConflict: 'product_id,price_date' }
     );
+    if (error) {
+      toast({ title: 'Save failed', description: error.message });
+    } else {
+      toast({ title: 'Price updated' });
+      setPriceMap((prev) => ({ ...prev, [product_id]: price }));
+      setEditingPrice(null);
+    }
   };
 
-  const updateStatus = (id, status) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+  const deleteProduct = async (id) => {
+    if (!window.confirm('Delete this product? This cannot be undone.')) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) toast({ title: 'Delete failed', description: error.message });
+    else {
+      toast({ title: 'Product deleted' });
+      loadProducts();
+    }
   };
 
-  const todaysRevenue = orders.reduce((s, o) => s + o.total, 0);
+  const toggleActive = async (p) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: !p.is_active })
+      .eq('id', p.id);
+    if (error) toast({ title: 'Update failed', description: error.message });
+    else loadProducts();
+  };
+
+  const addProduct = async () => {
+    if (!newProduct.name.trim()) return;
+    const maxSort = products.reduce((m, p) => Math.max(m, p.sort_order || 0), 0);
+    const { error } = await supabase.from('products').insert({
+      name: newProduct.name,
+      description: newProduct.description,
+      unit: newProduct.unit,
+      sort_order: maxSort + 1,
+      is_active: true,
+    });
+    if (error) toast({ title: 'Add failed', description: error.message });
+    else {
+      toast({ title: 'Product added' });
+      setShowAddProduct(false);
+      setNewProduct({ name: '', description: '', unit: 'kg' });
+      loadProducts();
+    }
+  };
+
+  const uploadImage = async (product_id, file) => {
+    setUploading(product_id);
+    try {
+      const fd = new FormData();
+      fd.append('product_id', product_id);
+      fd.append('admin_token', session.access_token);
+      fd.append('file', file);
+      const resp = await api.post('/admin/upload-product-image', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast({ title: 'Image uploaded' });
+      setProducts((prev) => prev.map((p) => (p.id === product_id ? { ...p, image_url: resp.data.image_url } : p)));
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err?.response?.data?.detail || err.message });
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const updateOrderStatus = async (id, status) => {
+    const { error } = await supabase.from('orders').update({ payment_status: status }).eq('id', id);
+    if (error) toast({ title: 'Update failed', description: error.message });
+    else loadOrders();
+  };
+
+  const deleteOrder = async (id) => {
+    if (!window.confirm('Delete this order permanently?')) return;
+    const { error } = await supabase.from('orders').delete().eq('id', id);
+    if (error) toast({ title: 'Delete failed', description: error.message });
+    else {
+      toast({ title: 'Order deleted' });
+      loadOrders();
+    }
+  };
+
+  const bulkDeleteDelivered = async () => {
+    if (!window.confirm('Delete all delivered & cancelled orders?')) return;
+    const { error } = await supabase.from('orders').delete().in('payment_status', ['delivered', 'cancelled']);
+    if (error) toast({ title: 'Delete failed', description: error.message });
+    else {
+      toast({ title: 'Old orders cleaned up' });
+      loadOrders();
+    }
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#FAF4EC] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-[#B93826]" /></div>;
+  if (!session || !isAdmin) return <Navigate to="/auth" replace />;
+
+  const activeOrders = orders.filter((o) => o.payment_status === 'paid' || o.payment_status === 'preparing' || o.payment_status === 'ready' || o.payment_status === 'out_for_delivery');
+  const revenueToday = orders
+    .filter((o) => new Date(o.created_at).toISOString().slice(0, 10) === todayISO() && o.payment_status !== 'cancelled')
+    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#FAF4EC]">
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-8 py-10">
-        <div className="mb-8">
-          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
-            SHOP DASHBOARD
+        <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
+          <div>
+            <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">SHOP DASHBOARD</div>
+            <h1 className="font-serif text-4xl text-[#2A1A14] mt-1">Admin</h1>
+            <p className="text-sm text-[#7B5A48] mt-1">Signed in as {session.user.email}</p>
           </div>
-          <h1 className="font-serif text-4xl text-[#2A1A14] mt-1">Admin</h1>
-          <p className="text-sm text-[#7B5A48] mt-1">
-            Update today's board and manage incoming orders.
-          </p>
+          <button
+            onClick={signOut}
+            className="px-4 py-2 rounded-full border border-[#EADFCF] hover:border-[#B93826] text-sm text-[#3B2416] flex items-center gap-1.5"
+          >
+            <LogOut className="w-4 h-4" /> Sign out
+          </button>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          <StatCard icon={ClipboardList} label="ORDERS TODAY" value={orders.length} sub="Live from UPI" />
-          <StatCard icon={IndianRupee} label="REVENUE" value={`₹${todaysRevenue}`} sub="Collected today" />
-          <StatCard icon={Package} label="READY" value={orders.filter((o) => o.status === 'Ready').length} />
-          <StatCard icon={TrendingUp} label="AVG TICKET" value={`₹${Math.round(todaysRevenue / orders.length)}`} />
+          <StatCard icon={ClipboardList} label="ORDERS TODAY" value={orders.filter((o) => new Date(o.created_at).toISOString().slice(0,10) === todayISO()).length} sub="All statuses" />
+          <StatCard icon={IndianRupee} label="REVENUE TODAY" value={`₹${revenueToday.toFixed(0)}`} />
+          <StatCard icon={Package} label="ACTIVE" value={activeOrders.length} sub="Paid / preparing / ready" />
+          <StatCard icon={TrendingUp} label="PRODUCTS" value={products.filter((p) => p.is_active).length} sub={`${products.length} total`} />
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="bg-white border border-[#EADFCF] rounded-2xl p-6">
-            <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Today's Board</h3>
-            <p className="text-xs text-[#7B5A48] mt-1 mb-4">Click edit to update price (₹/kg).</p>
-            <ul className="divide-y divide-[#EADFCF]">
-              {prices.map((p) => (
-                <li key={p.id} className="py-3 flex items-center justify-between">
-                  <span className="font-serif text-[#2A1A14]">{p.name}</span>
-                  <div className="flex items-center gap-2">
-                    {editingId === p.id ? (
+        {/* Products + Prices */}
+        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Products & Today's Board</h3>
+              <p className="text-xs text-[#7B5A48] mt-1">Click a price to edit. Hide a product by toggling active.</p>
+            </div>
+            <button
+              onClick={() => setShowAddProduct(true)}
+              className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Add product
+            </button>
+          </div>
+
+          {showAddProduct && (
+            <div className="border border-dashed border-[#B93826] rounded-xl p-4 mb-4 bg-[#FAF4EC]">
+              <div className="grid sm:grid-cols-3 gap-3">
+                <input
+                  placeholder="Name"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                />
+                <input
+                  placeholder="Description"
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm sm:col-span-2"
+                />
+              </div>
+              <div className="mt-3 flex gap-2 justify-end">
+                <button onClick={() => setShowAddProduct(false)} className="px-4 py-1.5 rounded-full border border-[#EADFCF] text-sm">Cancel</button>
+                <button onClick={addProduct} className="px-4 py-1.5 rounded-full bg-[#B93826] text-white text-sm">Save</button>
+              </div>
+            </div>
+          )}
+
+          <ul className="divide-y divide-[#EADFCF]">
+            {products.map((p) => (
+              <li key={p.id} className="py-4 flex flex-wrap items-center gap-4">
+                <div className="w-14 h-14 rounded-lg bg-[#F3EADB] overflow-hidden flex items-center justify-center shrink-0 relative">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="w-5 h-5 text-[#7B5A48]" />
+                  )}
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/40 transition-colors cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadImage(p.id, e.target.files[0])}
+                    />
+                    {uploading === p.id ? (
+                      <Loader2 className="w-4 h-4 text-white animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-white opacity-0 group-hover:opacity-100" />
+                    )}
+                  </label>
+                </div>
+                <div className="flex-1 min-w-[160px]">
+                  <div className="font-serif text-lg text-[#2A1A14]">{p.name}</div>
+                  <div className="text-xs text-[#7B5A48]">{p.description}</div>
+                </div>
+                <div className="min-w-[120px]">
+                  {editingPrice === p.id ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[#B93826]">₹</span>
                       <input
-                        type="number"
                         autoFocus
-                        value={p.price}
-                        onChange={(e) => updatePrice(p.id, e.target.value)}
+                        type="number"
+                        value={priceInput}
+                        onChange={(e) => setPriceInput(e.target.value)}
                         className="w-20 px-2 py-1 rounded-md border border-[#B93826] text-right text-sm"
                       />
-                    ) : (
-                      <span className="font-serif font-bold text-[#B93826]">₹{p.price}</span>
-                    )}
+                      <button onClick={() => savePrice(p.id)} className="p-1.5 rounded-md bg-[#B93826] text-white">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setEditingPrice(null)} className="p-1.5 rounded-md text-[#7B5A48]">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => setEditingId(editingId === p.id ? null : p.id)}
-                      className="p-1.5 rounded-md hover:bg-[#F4E4D1] text-[#3B2416]"
+                      onClick={() => {
+                        setEditingPrice(p.id);
+                        setPriceInput(String(priceMap[p.id] ?? ''));
+                      }}
+                      className="text-left"
                     >
-                      {editingId === p.id ? <Check className="w-4 h-4" /> : <Edit2 className="w-3.5 h-3.5" />}
+                      <span className="font-serif font-bold text-[#B93826] text-xl">₹{priceMap[p.id] ?? '—'}</span>
+                      <span className="text-xs text-[#7B5A48] ml-1">/{p.unit}</span>
+                      <Pencil className="w-3 h-3 inline ml-2 text-[#7B5A48]" />
+                    </button>
+                  )}
+                </div>
+                <label className="flex items-center gap-2 text-xs text-[#7B5A48]">
+                  <input
+                    type="checkbox"
+                    checked={p.is_active}
+                    onChange={() => toggleActive(p)}
+                    className="w-4 h-4 accent-[#B93826]"
+                  />
+                  Active
+                </label>
+                <button
+                  onClick={() => deleteProduct(p.id)}
+                  className="p-2 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Orders */}
+        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Orders</h3>
+              <p className="text-xs text-[#7B5A48] mt-1">Update status · delete old ones to keep it tidy</p>
+            </div>
+            <button
+              onClick={bulkDeleteDelivered}
+              className="px-4 py-2 rounded-full border border-[#EADFCF] hover:border-[#B93826] text-sm text-[#3B2416] flex items-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" /> Clean up (delivered + cancelled)
+            </button>
+          </div>
+
+          {orders.length === 0 ? (
+            <div className="text-center py-10 text-[#7B5A48] text-sm">No orders yet.</div>
+          ) : (
+            <ul className="space-y-3">
+              {orders.map((o) => (
+                <li key={o.id} className="border border-[#EADFCF] rounded-xl p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <div className="font-semibold text-[#2A1A14]">
+                        {o.customer_name}
+                        <span className="text-xs text-[#7B5A48] ml-2 font-normal">· {o.customer_phone}</span>
+                      </div>
+                      <div className="text-xs text-[#7B5A48]">
+                        {new Date(o.created_at).toLocaleString('en-IN')} · {o.upi_txn_ref ? `✅ ${o.upi_txn_ref.slice(0, 18)}` : 'unpaid'}
+                      </div>
+                    </div>
+                    <div className="font-serif font-bold text-[#B93826] text-lg">₹{Number(o.total_amount).toFixed(0)}</div>
+                  </div>
+                  <div className="mt-2 text-xs text-[#3B2416]">
+                    {Array.isArray(o.items) && o.items.map((i, idx) => (
+                      <span key={idx} className="mr-2">{i.name} × {i.qty}kg</span>
+                    ))}
+                  </div>
+                  {o.customer_address && <div className="text-xs text-[#7B5A48] mt-1">📍 {o.customer_address}</div>}
+                  {o.delivery_lat && o.delivery_lng && (
+                    <a
+                      href={`https://maps.google.com/?q=${o.delivery_lat},${o.delivery_lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-[#B93826] underline"
+                    >
+                      View location on map
+                    </a>
+                  )}
+                  <div className="mt-3 flex gap-2 flex-wrap items-center">
+                    {['preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateOrderStatus(o.id, s)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          o.payment_status === s
+                            ? 'bg-[#B93826] text-white border-[#B93826]'
+                            : 'bg-white border-[#EADFCF] text-[#3B2416] hover:border-[#B93826]/40'
+                        }`}
+                      >
+                        {s.replace(/_/g, ' ')}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => deleteOrder(o.id)}
+                      className="text-xs px-3 py-1 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826] ml-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 inline" /> Delete
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
-          </div>
-
-          <div className="bg-white border border-[#EADFCF] rounded-2xl p-6">
-            <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Recent Orders</h3>
-            <p className="text-xs text-[#7B5A48] mt-1 mb-4">Update status to keep customers posted.</p>
-            <ul className="space-y-3">
-              {orders.map((o) => (
-                <li key={o.id} className="border border-[#EADFCF] rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-[#2A1A14]">{o.id} · {o.customer}</div>
-                      <div className="text-xs text-[#7B5A48]">{o.time} · {o.payment}</div>
-                    </div>
-                    <div className="font-serif font-bold text-[#B93826]">₹{o.total}</div>
-                  </div>
-                  <div className="mt-2 text-xs text-[#3B2416]">
-                    {o.items.map((i) => `${i.name} × ${i.qty}kg`).join(', ')}
-                  </div>
-                  <div className="mt-3 flex gap-2 flex-wrap">
-                    {['Preparing', 'Ready', 'Out for delivery', 'Delivered'].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => updateStatus(o.id, s)}
-                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                          o.status === s
-                            ? 'bg-[#B93826] text-white border-[#B93826]'
-                            : 'bg-white border-[#EADFCF] text-[#3B2416] hover:border-[#B93826]/40'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          )}
         </div>
       </section>
 

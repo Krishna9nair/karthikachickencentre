@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Languages, Menu, X, Drumstick } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-
-const NAV = [
-  { label: 'Home', to: '/' },
-  { label: 'Shop', to: '/#shop' },
-  { label: "Today's Price", to: '/#price' },
-  { label: 'Admin', to: '/admin' },
-  { label: 'Rider', to: '/rider' },
-];
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const { totalQty, setIsOpen } = useCart();
+  const { isAdmin } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname, hash } = useLocation();
+
+  const NAV = [
+    { label: 'Home', to: '/' },
+    { label: 'Shop', to: '/#shop' },
+    { label: "Today's Price", to: '/#price' },
+    { label: isAdmin ? 'Admin' : 'Admin Login', to: isAdmin ? '/admin' : '/auth' },
+    { label: 'Rider', to: '/rider' },
+  ];
 
   const isActive = (to) => {
     if (to === '/') return pathname === '/' && !hash;
