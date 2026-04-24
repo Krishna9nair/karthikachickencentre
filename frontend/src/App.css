@@ -1,0 +1,36 @@
+/* Fresh Cluck - minimal overrides */
+.App {
+  min-height: 100vh;
+}
+
+/* Font setup via Google Fonts in index.html head (fallback safe) */
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #FAF4EC;
+  color: #2A1A14;
+}
+
+.font-serif {
+  font-family: 'Fraunces', 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-optical-sizing: auto;
+  font-variation-settings: 'SOFT' 30, 'WONK' 0;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* Remove default tap highlight */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Number input arrows off */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
