@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, MapPin, Loader2, Smartphone } from 'lucide-react';
+import { X, CheckCircle2, MapPin, Loader2, Smartphone, Banknote } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
@@ -12,6 +12,7 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [location, setLocation] = useState(null); // { lat, lng }
   const [geoStatus, setGeoStatus] = useState('idle'); // idle | loading | ok | error
   const [orderDetails, setOrderDetails] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('online'); // online | cod
 
   if (!open) return null;
 
@@ -67,6 +68,22 @@ const CheckoutDialog = ({ open, onClose }) => {
       notes: '',
     };
 
+    // Cash on delivery path — no Razorpay
+    if (paymentMethod === 'cod') {
+      try {
+        const resp = await api.post('/orders/cod', payload);
+        setOrderDetails(resp.data.order);
+        setStep('success');
+      } catch (err) {
+        toast({
+          title: 'Could not place order',
+          description: err?.response?.data?.detail || err.message,
+        });
+        setStep('form');
+      }
+      return;
+    }
+
     try {
       const ok = await loadRazorpay();
       if (!ok) throw new Error('Could not load Razorpay');
@@ -121,6 +138,7 @@ const CheckoutDialog = ({ open, onClose }) => {
     setLocation(null);
     setGeoStatus('idle');
     setOrderDetails(null);
+    setPaymentMethod('online');
     onClose();
     setIsOpen(false);
   };
@@ -214,14 +232,60 @@ const CheckoutDialog = ({ open, onClose }) => {
               </div>
             </div>
 
+            <div>
+              <div className="text-xs font-medium text-[#7B5A48] mb-2">Payment method</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('online')}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-sm transition-colors ${
+                    paymentMethod === 'online'
+                      ? 'border-[#B93826] bg-[#B93826]/5 text-[#B93826]'
+                      : 'border-[#EADFCF] bg-white text-[#3B2416]'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <div className="text-left">
+                    <div className="font-medium">Pay Online</div>
+                    <div className="text-[10px] opacity-70">UPI / Card / Wallet</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('cod')}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-sm transition-colors ${
+                    paymentMethod === 'cod'
+                      ? 'border-[#B93826] bg-[#B93826]/5 text-[#B93826]'
+                      : 'border-[#EADFCF] bg-white text-[#3B2416]'
+                  }`}
+                >
+                  <Banknote className="w-4 h-4" />
+                  <div className="text-left">
+                    <div className="font-medium">Cash on Delivery</div>
+                    <div className="text-[10px] opacity-70">Pay at doorstep</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium flex items-center justify-center gap-2"
             >
-              <Smartphone className="w-4 h-4" /> Pay ₹{subtotal.toFixed(0)} via Razorpay
+              {paymentMethod === 'cod' ? (
+                <>
+                  <Banknote className="w-4 h-4" /> Place order · ₹{subtotal.toFixed(0)} COD
+                </>
+              ) : (
+                <>
+                  <Smartphone className="w-4 h-4" /> Pay ₹{subtotal.toFixed(0)} via Razorpay
+                </>
+              )}
             </button>
             <p className="text-[11px] text-center text-[#7B5A48]">
-              UPI / Cards / Wallets · Secured by Razorpay
+              {paymentMethod === 'cod'
+                ? 'Rider will collect cash when delivering.'
+                : 'UPI / Cards / Wallets · Secured by Razorpay'}
             </p>
           </form>
         )}
@@ -247,7 +311,9 @@ const CheckoutDialog = ({ open, onClose }) => {
               </div>
             )}
             <div className="mt-5 rounded-xl bg-[#F3EADB] px-5 py-3">
-              <div className="text-xs text-[#7B5A48]">Paid</div>
+              <div className="text-xs text-[#7B5A48]">
+                {paymentMethod === 'cod' ? 'Pay on delivery' : 'Paid'}
+              </div>
               <div className="font-serif text-2xl font-bold text-[#B93826]">
                 ₹{subtotal.toFixed(0)}
               </div>

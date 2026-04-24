@@ -246,6 +246,32 @@ async def verify_payment(body: VerifyPaymentIn):
         raise HTTPException(500, f"Could not save order: {e}")
 
 
+@api_router.post("/orders/cod")
+async def create_cod_order(payload: CreateOrderIn):
+    """Cash-on-delivery: insert the order directly with payment_status='cod_pending'."""
+    if payload.total_amount <= 0 or not payload.items:
+        raise HTTPException(400, "Empty cart")
+    try:
+        insert_payload = {
+            "customer_name": payload.customer_name,
+            "customer_phone": payload.customer_phone,
+            "customer_address": payload.customer_address or None,
+            "items": [i.dict() for i in payload.items],
+            "total_amount": payload.total_amount,
+            "payment_status": "cod_pending",
+            "upi_txn_ref": None,
+            "notes": payload.notes or None,
+            "delivery_lat": payload.delivery_lat,
+            "delivery_lng": payload.delivery_lng,
+        }
+        res = sb.table("orders").insert(insert_payload).execute()
+        order_row = res.data[0] if res.data else None
+        return {"ok": True, "order": order_row}
+    except Exception as e:
+        logging.exception("cod order failed")
+        raise HTTPException(500, f"Could not save order: {e}")
+
+
 # ----------------------- Rider -----------------------
 @api_router.post("/rider/login")
 async def rider_login(body: RiderLoginIn):
@@ -266,7 +292,7 @@ async def rider_login(body: RiderLoginIn):
 async def rider_orders(_: dict = Depends(require_rider)):
     try:
         res = sb.table("orders").select("*").in_(
-            "payment_status", ["paid", "preparing", "ready", "out_for_delivery"]
+            "payment_status", ["paid", "preparing", "ready", "out_for_delivery", "cod_pending"]
         ).order("created_at", desc=True).execute()
         return {"orders": res.data or []}
     except Exception as e:

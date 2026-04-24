@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
-  ClipboardList, Package, TrendingUp, ImageIcon, Loader2,
+  ClipboardList, Package, TrendingUp, ImageIcon, Loader2, Store,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -39,13 +39,44 @@ const Admin = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', description: '', unit: 'kg' });
   const [uploading, setUploading] = useState(null);
+  const [shop, setShop] = useState(null);
+  const [shopDraft, setShopDraft] = useState(null);
+  const [savingShop, setSavingShop] = useState(false);
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
   }, [session, isAdmin]);
 
   const loadAll = async () => {
-    await Promise.all([loadProducts(), loadOrders()]);
+    await Promise.all([loadProducts(), loadOrders(), loadShop()]);
+  };
+
+  const loadShop = async () => {
+    const { data } = await supabase.from('shop_settings').select('*').limit(1).maybeSingle();
+    setShop(data);
+    setShopDraft(data);
+  };
+
+  const saveShop = async () => {
+    if (!shopDraft?.id) return;
+    setSavingShop(true);
+    const { error } = await supabase
+      .from('shop_settings')
+      .update({
+        shop_name: shopDraft.shop_name,
+        contact_phone: shopDraft.contact_phone,
+        address: shopDraft.address,
+        notice: shopDraft.notice,
+        upi_id: shopDraft.upi_id,
+        rider_passcode: shopDraft.rider_passcode,
+      })
+      .eq('id', shopDraft.id);
+    setSavingShop(false);
+    if (error) toast({ title: 'Save failed', description: error.message });
+    else {
+      toast({ title: 'Shop settings updated' });
+      setShop(shopDraft);
+    }
   };
 
   const loadProducts = async () => {
@@ -211,6 +242,84 @@ const Admin = () => {
           <StatCard icon={Package} label="ACTIVE" value={activeOrders.length} sub="Paid / preparing / ready" />
           <StatCard icon={TrendingUp} label="PRODUCTS" value={products.filter((p) => p.is_active).length} sub={`${products.length} total`} />
         </div>
+
+        {/* Shop Settings */}
+        {shop && (
+          <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
+                  <Store className="w-5 h-5 text-[#B93826]" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Shop Settings</h3>
+                  <p className="text-xs text-[#7B5A48]">Change shop name, phone, address, UPI ID, and rider passcode.</p>
+                </div>
+              </div>
+              <button
+                onClick={saveShop}
+                disabled={savingShop || !shopDraft}
+                className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {savingShop ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save changes
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-[#7B5A48]">Shop name</label>
+                <input
+                  value={shopDraft?.shop_name || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, shop_name: e.target.value })}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#7B5A48]">Contact phone</label>
+                <input
+                  value={shopDraft?.contact_phone || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, contact_phone: e.target.value })}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-[#7B5A48]">Address</label>
+                <textarea
+                  rows={2}
+                  value={shopDraft?.address || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, address: e.target.value })}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm resize-none"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-[#7B5A48]">Notice (shown in shop)</label>
+                <input
+                  value={shopDraft?.notice || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, notice: e.target.value })}
+                  placeholder="e.g., Closed Monday for market day"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#7B5A48]">UPI ID</label>
+                <input
+                  value={shopDraft?.upi_id || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, upi_id: e.target.value })}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#7B5A48]">Rider passcode</label>
+                <input
+                  value={shopDraft?.rider_passcode || ''}
+                  onChange={(e) => setShopDraft({ ...shopDraft, rider_passcode: e.target.value })}
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Products + Prices */}
         <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mb-6">
@@ -380,7 +489,7 @@ const Admin = () => {
                     </a>
                   )}
                   <div className="mt-3 flex gap-2 flex-wrap items-center">
-                    {['preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'].map((s) => (
+                    {['cod_pending', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'].map((s) => (
                       <button
                         key={s}
                         onClick={() => updateOrderStatus(o.id, s)}
