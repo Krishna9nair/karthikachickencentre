@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ChickenCrew</string>
+    <string name="title_activity_main">ChickenCrew</string>
+    <string name="package_name">shop.chickencrew.app</string>
+    <string name="custom_url_scheme">shop.chickencrew.app</string>
+</resources>
