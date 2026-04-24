@@ -59,14 +59,14 @@ const Hero = () => {
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative max-w-xs sm:max-w-sm md:max-w-none mx-auto md:mx-0 w-full">
           <div className="absolute -inset-6 bg-gradient-to-br from-[#F5D4C0]/40 via-[#FAF4EC] to-[#FAF4EC] rounded-3xl blur-2xl" />
           <div className="relative rounded-2xl bg-[#FFF8EE] border-2 border-[#C47B4A] shadow-lg overflow-hidden">
-            <div className="m-3 border-[1.5px] border-[#C47B4A] rounded-xl p-4 relative">
+            <div className="m-2 md:m-3 border-[1.5px] border-[#C47B4A] rounded-xl p-3 md:p-4 relative">
               <img
                 src="https://karthikachickencentre.shop/assets/hero-rooster-d4bxhC-A.jpg"
                 alt="Fresh farm rooster illustration"
-                className="w-full h-auto object-contain"
+                className="w-full h-auto object-contain max-h-[260px] sm:max-h-[320px] md:max-h-none"
                 onError={(e) => {
                   e.target.src =
                     'https://images.pexels.com/photos/27202653/pexels-photo-27202653.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=700';
@@ -74,7 +74,7 @@ const Hero = () => {
               />
             </div>
           </div>
-          <div className="absolute -bottom-4 left-8 md:left-16 bg-[#F3B43E] text-[#3B2416] font-serif font-bold text-sm px-4 py-2 rounded-lg shadow-md rotate-[-4deg]">
+          <div className="absolute -bottom-3 md:-bottom-4 left-6 md:left-16 bg-[#F3B43E] text-[#3B2416] font-serif font-bold text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-md rotate-[-4deg]">
             Open today!
           </div>
         </div>
