@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Admin from './pages/Admin';
 import Rider from './pages/Rider';
 import Auth from './pages/Auth';
+import InstallPrompt from './components/InstallPrompt';
 import { Toaster } from './components/ui/toaster';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/rider" element={<Rider />} />
             </Routes>
+            <InstallPrompt />
             <Toaster />
           </BrowserRouter>
         </CartProvider>
