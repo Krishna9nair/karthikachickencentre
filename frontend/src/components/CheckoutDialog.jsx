@@ -123,7 +123,7 @@ const CheckoutDialog = ({ open, onClose }) => {
         amount: data.amount,
         currency: data.currency,
         order_id: data.razorpay_order_id,
-        name: 'Fresh Cluck',
+        name: 'ChickenCrew',
         description: 'Fresh chicken order',
         prefill: { name: form.name, contact: form.phone },
         theme: { color: '#B93826' },

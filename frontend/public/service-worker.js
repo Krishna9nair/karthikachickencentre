@@ -1,4 +1,4 @@
-// Fresh Cluck service worker — minimal, PWA-installable.
+// ChickenCrew service worker — minimal, PWA-installable.
 const CACHE = 'fresh-cluck-v1';
 const CORE = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 

@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 
 const Footer = () => {
   const [shop, setShop] = useState({
-    shop_name: 'Fresh Cluck',
+    shop_name: 'ChickenCrew',
     address: '',
     contact_phone: '',
   });
@@ -22,7 +22,7 @@ const Footer = () => {
               <Drumstick className="w-5 h-5 text-[#FAF4EC]" />
             </div>
             <div className="font-serif font-bold text-xl text-[#2A1A14]">
-              {shop.shop_name || 'Fresh Cluck'}
+              {shop.shop_name || 'ChickenCrew'}
             </div>
           </div>
           <p className="mt-4 text-sm text-[#6B4E3D] max-w-xs leading-relaxed">
@@ -61,7 +61,7 @@ const Footer = () => {
 
       <div className="border-t border-[#EADFCF] py-5">
         <div className="max-w-7xl mx-auto px-5 md:px-8 text-center text-xs text-[#7B5A48]">
-          © {new Date().getFullYear()} {shop.shop_name || 'Fresh Cluck'}. All rights reserved.
+          © {new Date().getFullYear()} {shop.shop_name || 'ChickenCrew'}. All rights reserved.
         </div>
       </div>
     </footer>

@@ -1,7 +1,7 @@
-// Mock data for Fresh Cluck (karthikachickencentre.shop clone)
+// Mock data for ChickenCrew (karthikachickencentre.shop clone)
 
 export const SHOP_INFO = {
-  name: 'Fresh Cluck',
+  name: 'ChickenCrew',
   tagline: 'FARM FRESH DAILY',
   address: 'Kartika Chicken Center, Trimurti Nagar, Dombivli East, Thane, Maharashtra 421201',
   phone: '8928370724',

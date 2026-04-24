@@ -34,7 +34,7 @@ const Navbar = () => {
           </div>
           <div className="leading-tight min-w-0">
             <div className="font-serif font-bold text-[#2A1A14] text-base md:text-lg truncate">
-              Fresh Cluck
+              ChickenCrew
             </div>
             <div className="text-[9px] md:text-[10px] tracking-[0.18em] text-[#7B5A48] font-medium">
               FARM FRESH DAILY

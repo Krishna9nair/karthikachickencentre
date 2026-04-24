@@ -52,7 +52,7 @@ const InstallPrompt = () => {
           <Smartphone className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-serif font-bold text-[#2A1A14] text-sm">Install Fresh Cluck</div>
+          <div className="font-serif font-bold text-[#2A1A14] text-sm">Install ChickenCrew</div>
           <div className="text-[11px] text-[#7B5A48] leading-snug">
             {isIOS
               ? 'Tap the Share icon → "Add to Home Screen"'

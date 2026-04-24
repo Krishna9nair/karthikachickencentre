@@ -38,7 +38,7 @@ const Auth = () => {
             <Drumstick className="w-6 h-6 text-[#FAF4EC]" />
           </div>
           <div>
-            <div className="font-serif font-bold text-xl text-[#2A1A14]">Fresh Cluck</div>
+            <div className="font-serif font-bold text-xl text-[#2A1A14]">ChickenCrew</div>
             <div className="text-[10px] tracking-[0.18em] text-[#7B5A48] font-medium">FARM FRESH DAILY</div>
           </div>
         </Link>
