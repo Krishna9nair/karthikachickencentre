@@ -1,3 +1,6 @@
-// Self-contained: uses capacitor-runtime inside this android project folder
+// Self-contained: uses local copies of Capacitor modules
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('./capacitor-runtime')
+
+include ':capacitor-geolocation'
+project(':capacitor-geolocation').projectDir = new File('./capacitor-geolocation')

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, MapPin, Loader2, Smartphone, Banknote } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
@@ -17,6 +19,41 @@ const CheckoutDialog = ({ open, onClose }) => {
   if (!open) return null;
 
   const captureLocation = async () => {
+    // NATIVE (Capacitor) path — uses Android/iOS location API
+    if (Capacitor.isNativePlatform()) {
+      setGeoStatus('loading');
+      try {
+        const perm = await Geolocation.checkPermissions();
+        if (perm.location !== 'granted') {
+          const req = await Geolocation.requestPermissions();
+          if (req.location !== 'granted') {
+            setGeoStatus('error');
+            toast({
+              title: 'Location permission denied',
+              description:
+                'Go to phone Settings → Apps → ChickenCrew → Permissions → Location → Allow.',
+            });
+            return;
+          }
+        }
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+        });
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoStatus('ok');
+        toast({ title: 'Location captured', description: 'Rider will use this for delivery.' });
+      } catch (err) {
+        setGeoStatus('error');
+        toast({
+          title: 'Location unavailable',
+          description: err?.message || 'Please enter your address manually.',
+        });
+      }
+      return;
+    }
+
+    // WEB path — browser geolocation
     if (!navigator.geolocation) {
       toast({
         title: 'Geolocation not supported',
@@ -25,7 +62,6 @@ const CheckoutDialog = ({ open, onClose }) => {
       return;
     }
 
-    // Check current permission state (if Permissions API supported)
     try {
       if (navigator.permissions?.query) {
         const perm = await navigator.permissions.query({ name: 'geolocation' });
