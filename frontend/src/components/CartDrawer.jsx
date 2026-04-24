@@ -113,7 +113,7 @@ const CartDrawer = () => {
               onClick={() => setCheckoutOpen(true)}
               className="w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium shadow-sm transition-colors"
             >
-              Checkout with UPI
+              Checkout
             </button>
             <p className="text-[11px] text-center text-[#7B5A48] mt-2">
               Pay instantly. Order ready before you reach the shop.
