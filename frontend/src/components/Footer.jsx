@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Phone, Drumstick } from 'lucide-react';
+import { MapPin, Phone } from 'lucide-react';
 import { api } from '../lib/api';
 
 const Footer = () => {
@@ -18,8 +18,8 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-12 md:py-14 grid md:grid-cols-3 gap-10">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#B93826] flex items-center justify-center">
-              <Drumstick className="w-5 h-5 text-[#FAF4EC]" />
+            <div className="w-11 h-11 rounded-full bg-[#FAF4EC] border border-[#EADFCF] flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="ChickenCrew" className="w-9 h-9 object-contain" />
             </div>
             <div className="font-serif font-bold text-xl text-[#2A1A14]">
               {shop.shop_name || 'ChickenCrew'}

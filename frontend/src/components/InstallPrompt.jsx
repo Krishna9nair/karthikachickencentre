@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, X, Smartphone } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 
 const InstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -48,8 +48,8 @@ const InstallPrompt = () => {
   return (
     <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-md">
       <div className="bg-white border border-[#EADFCF] rounded-2xl shadow-lg p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#B93826] flex items-center justify-center shrink-0">
-          <Smartphone className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-[#FAF4EC] border border-[#EADFCF] flex items-center justify-center shrink-0 overflow-hidden">
+          <img src="/logo.png" alt="ChickenCrew" className="w-8 h-8 object-contain" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-serif font-bold text-[#2A1A14] text-sm">Install ChickenCrew</div>

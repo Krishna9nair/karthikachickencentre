@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, Loader2, Drumstick } from 'lucide-react';
+import { Lock, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/use-toast';
 
@@ -34,8 +34,8 @@ const Auth = () => {
     <div className="min-h-screen bg-[#FAF4EC] flex items-center justify-center p-5">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-11 h-11 rounded-full bg-[#B93826] flex items-center justify-center">
-            <Drumstick className="w-6 h-6 text-[#FAF4EC]" />
+          <div className="w-12 h-12 rounded-full bg-[#FAF4EC] border border-[#EADFCF] flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="ChickenCrew" className="w-10 h-10 object-contain" />
           </div>
           <div>
             <div className="font-serif font-bold text-xl text-[#2A1A14]">ChickenCrew</div>

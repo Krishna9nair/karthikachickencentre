@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Languages, Drumstick } from 'lucide-react';
+import { ShoppingCart, Languages } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,8 +29,8 @@ const Navbar = () => {
       {/* Top row: logo + utilities */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-3">
         <Link to="/" className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#B93826] flex items-center justify-center shadow-sm shrink-0">
-            <Drumstick className="w-5 h-5 text-[#FAF4EC]" strokeWidth={2.25} />
+          <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#FAF4EC] border border-[#EADFCF] flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/logo.png" alt="ChickenCrew" className="w-8 h-8 md:w-9 md:h-9 object-contain" />
           </div>
           <div className="leading-tight min-w-0">
             <div className="font-serif font-bold text-[#2A1A14] text-base md:text-lg truncate">
