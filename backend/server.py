@@ -146,7 +146,7 @@ async def get_products():
         if not price_map:
             all_prices = sb.table("daily_prices").select(
                 "product_id, price_per_unit, price_date"
-            ).order("price_date", desc=True).execute()
+            ).order("price_date", desc=True).limit(200).execute()
             seen = set()
             for p in (all_prices.data or []):
                 if p["product_id"] in seen:
@@ -293,7 +293,7 @@ async def rider_orders(_: dict = Depends(require_rider)):
     try:
         res = sb.table("orders").select("*").in_(
             "payment_status", ["paid", "preparing", "ready", "out_for_delivery", "cod_pending"]
-        ).order("created_at", desc=True).execute()
+        ).order("created_at", desc=True).limit(100).execute()
         return {"orders": res.data or []}
     except Exception as e:
         raise HTTPException(500, f"Failed to fetch: {e}")
