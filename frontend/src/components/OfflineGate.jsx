@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
+import { useT } from '../lib/i18n';
 
 /**
  * Full-screen overlay shown when the device loses internet.
@@ -24,6 +25,7 @@ const probe = async () => {
 };
 
 const OfflineGate = () => {
+  const t = useT();
   const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [checking, setChecking] = useState(false);
 
@@ -65,9 +67,9 @@ const OfflineGate = () => {
       <div className="w-32 h-32 rounded-full bg-[#B93826]/10 flex items-center justify-center mb-6">
         <WifiOff className="w-14 h-14 text-[#B93826]" strokeWidth={1.5} />
       </div>
-      <h2 className="font-serif text-3xl text-[#2A1A14]">No Internet</h2>
+      <h2 className="font-serif text-3xl text-[#2A1A14]">{t('offline.title')}</h2>
       <p className="mt-2 text-center text-[#7B5A48] max-w-xs">
-        Seems like you are not connected to the internet
+        {t('offline.subtitle')}
       </p>
       <button
         onClick={retry}
@@ -76,7 +78,7 @@ const OfflineGate = () => {
         data-testid="offline-refresh-btn"
       >
         <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
-        {checking ? 'Checking…' : 'Refresh'}
+        {checking ? t('offline.checking') : t('offline.refresh')}
       </button>
     </div>
   );

@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { I18nProvider } from './lib/i18n';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import Rider from './pages/Rider';
@@ -45,27 +46,29 @@ function App() {
 
   return (
     <div className="App">
-      <AuthProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <ScrollToHash />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/rider" element={<Rider />} />
-              {/* Legacy / direct-URL aliases -> home sections */}
-              <Route path="/shop" element={<Navigate to="/#shop" replace />} />
-              <Route path="/price" element={<Navigate to="/#price" replace />} />
-              {/* Catch-all: any unknown path goes home */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            <InstallPrompt />
-            <OfflineGate />
-            <Toaster />
-          </BrowserRouter>
-        </CartProvider>
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <ScrollToHash />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/rider" element={<Rider />} />
+                {/* Legacy / direct-URL aliases -> home sections */}
+                <Route path="/shop" element={<Navigate to="/#shop" replace />} />
+                <Route path="/price" element={<Navigate to="/#price" replace />} />
+                {/* Catch-all: any unknown path goes home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+              <InstallPrompt />
+              <OfflineGate />
+              <Toaster />
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
+      </I18nProvider>
     </div>
   );
 }

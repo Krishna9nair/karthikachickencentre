@@ -2,30 +2,37 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Star, RefreshCw } from 'lucide-react';
 import { fetchPublicProducts } from '../lib/publicData';
 import useAutoRefresh from '../lib/useAutoRefresh';
+import { useT, useI18n } from '../lib/i18n';
 
 // Tiny self-updating "X seconds ago" label
 const RelativeTime = ({ date, className = '' }) => {
+  const t = useT();
+  const { lang } = useI18n();
   const [, force] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => force((n) => n + 1), 15000);
-    return () => clearInterval(t);
+    const tt = setInterval(() => force((n) => n + 1), 15000);
+    return () => clearInterval(tt);
   }, []);
   if (!date) return null;
   const diff = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+  const unit = lang === 'hi' ? { s: 'से', m: 'मि', h: 'घं' } : { s: 's', m: 'm', h: 'h' };
+  const ago = lang === 'hi' ? 'पहले' : 'ago';
   const label =
-    diff < 10 ? 'just now'
-    : diff < 60 ? `${diff}s ago`
-    : diff < 3600 ? `${Math.floor(diff / 60)}m ago`
-    : `${Math.floor(diff / 3600)}h ago`;
-  return <span className={className}>Updated {label}</span>;
+    diff < 10 ? t('price.just_now')
+    : diff < 60 ? `${diff}${unit.s} ${ago}`
+    : diff < 3600 ? `${Math.floor(diff / 60)}${unit.m} ${ago}`
+    : `${Math.floor(diff / 3600)}${unit.h} ${ago}`;
+  return <span className={className}>{t('price.updated')} {label}</span>;
 };
 
 const TodayPrice = () => {
+  const t = useT();
+  const { lang } = useI18n();
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [updatedAt, setUpdatedAt] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const today = new Date().toLocaleDateString('en-IN', {
+  const today = new Date().toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -54,9 +61,9 @@ const TodayPrice = () => {
       <div className="max-w-5xl mx-auto px-5 md:px-8">
         <div className="text-center mb-6 md:mb-10">
           <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
-            DAILY BOARD
+            {t('price.eyebrow')}
           </div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">Today's Price</h2>
+          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">{t('price.title')}</h2>
           <div className="mt-2 text-sm text-[#7B5A48]">{today}</div>
         </div>
 
@@ -66,7 +73,7 @@ const TodayPrice = () => {
           <div className="flex items-center justify-between pb-4 border-b border-[#C47B4A]/30 mb-4 relative gap-3">
             <div className="flex items-center gap-2 text-[#F3B43E] font-serif text-2xl md:text-3xl font-bold min-w-0">
               <Star className="w-5 h-5 fill-[#F3B43E] shrink-0" />
-              <span className="truncate">Fresh Today</span>
+              <span className="truncate">{t('price.fresh_today')}</span>
               <Star className="w-5 h-5 fill-[#F3B43E] shrink-0" />
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -84,31 +91,31 @@ const TodayPrice = () => {
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
               <div className="text-[#F3B43E] border border-[#F3B43E]/60 rounded-full px-3 py-1 text-xs md:text-sm">
-                ₹ / kg
+                {t('price.per_kg')}
               </div>
             </div>
           </div>
 
           {status === 'loading' ? (
             <div className="text-center py-8 text-[#FBE8BE]/70" data-testid="today-price-loading">
-              Loading today's board…
+              {t('price.loading')}
             </div>
           ) : status === 'error' ? (
             <div className="text-center py-8 relative" data-testid="today-price-error">
               <div className="text-[#FBE8BE]/90 text-sm">
-                Couldn't reach the board. Check your connection.
+                {t('price.error')}
               </div>
               <button
                 onClick={load}
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#F3B43E]/60 text-[#F3B43E] hover:bg-[#F3B43E]/10 transition-colors text-sm"
                 data-testid="today-price-retry-btn"
               >
-                <RefreshCw className="w-4 h-4" /> Retry
+                <RefreshCw className="w-4 h-4" /> {t('price.retry')}
               </button>
             </div>
           ) : products.filter((p) => p.price != null).length === 0 ? (
             <div className="text-center py-8 text-[#FBE8BE]/70">
-              No prices published yet for today.
+              {t('price.empty')}
             </div>
           ) : (
             <ul className="divide-y divide-[#C47B4A]/20 relative">
@@ -130,7 +137,7 @@ const TodayPrice = () => {
         </div>
 
         <p className="text-center text-xs text-[#7B5A48] mt-5 italic">
-          * Prices may vary slightly based on market rates. Updated daily by our shop.
+          {t('price.disclaimer')}
         </p>
       </div>
     </section>

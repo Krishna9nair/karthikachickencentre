@@ -3,10 +3,12 @@ import { Plus, Minus, Trash2, RefreshCw } from 'lucide-react';
 import { fetchPublicProducts } from '../lib/publicData';
 import useAutoRefresh from '../lib/useAutoRefresh';
 import { useCart } from '../context/CartContext';
+import { useT } from '../lib/i18n';
 
 const STEP = 0.25;
 
 const ProductCard = ({ product }) => {
+  const t = useT();
   const { items, addItem, updateQty, removeItem } = useCart();
   const inCart = items.find((i) => i.id === product.id);
   const qty = inCart?.qty || 0;
@@ -33,7 +35,7 @@ const ProductCard = ({ product }) => {
           {product.name}
         </h3>
         <span className="shrink-0 text-[10px] tracking-[0.15em] font-semibold text-[#B93826] border border-dashed border-[#B93826] rounded-full px-2.5 py-1">
-          FRESH
+          {t('shop.fresh_badge')}
         </span>
       </div>
       {product.description && (
@@ -42,7 +44,7 @@ const ProductCard = ({ product }) => {
 
       <div className="mt-6 flex items-end justify-between gap-3">
         <div>
-          <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48]">TODAY</div>
+          <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48]">{t('shop.today')}</div>
           <div className="flex items-baseline gap-1 mt-1">
             <span className="font-serif text-3xl font-bold text-[#B93826]">
               ₹{product.price ?? '—'}
@@ -77,7 +79,7 @@ const ProductCard = ({ product }) => {
             disabled={!product.price}
             className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-medium shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="w-4 h-4" /> Add
+            <Plus className="w-4 h-4" /> {t('shop.add')}
           </button>
         )}
       </div>
@@ -86,6 +88,7 @@ const ProductCard = ({ product }) => {
 };
 
 const Shop = () => {
+  const t = useT();
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
 
@@ -106,10 +109,10 @@ const Shop = () => {
     <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
       <div className="max-w-6xl mx-auto px-5 md:px-8">
         <div className="text-center mb-8 md:mb-12">
-          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">OUR CUTS</div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">Pick your pieces</h2>
+          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">{t('shop.eyebrow')}</div>
+          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">{t('shop.title')}</h2>
           <p className="mt-3 text-[#7B5A48] max-w-xl mx-auto">
-            Hand-cut by our butchers each morning. Add to cart, pay by UPI, and we'll get it ready.
+            {t('shop.subtitle')}
           </p>
         </div>
 
@@ -122,18 +125,18 @@ const Shop = () => {
         ) : status === 'error' ? (
           <div className="text-center py-10" data-testid="shop-error">
             <div className="text-[#7B5A48] mb-4">
-              Couldn't load products. Check your connection.
+              {t('shop.error')}
             </div>
             <button
               onClick={load}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium shadow-sm transition-colors"
               data-testid="shop-retry-btn"
             >
-              <RefreshCw className="w-4 h-4" /> Retry
+              <RefreshCw className="w-4 h-4" /> {t('price.retry')}
             </button>
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center text-[#7B5A48]">No products available right now.</div>
+          <div className="text-center text-[#7B5A48]">{t('shop.empty')}</div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {products.map((p) => (
