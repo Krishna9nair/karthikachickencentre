@@ -45,6 +45,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, isAdmin]);
 
   const loadAll = async () => {

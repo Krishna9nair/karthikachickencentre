@@ -18,6 +18,7 @@ const Rider = () => {
 
   useEffect(() => {
     if (token) loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const loadOrders = async () => {
