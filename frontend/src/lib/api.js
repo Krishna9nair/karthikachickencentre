@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Fallback to the Emergent preview URL so Vercel/PWA still works for
+// Razorpay even if env var isn't set. Override locally via .env.
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL || 'https://karthik-chicken-app.preview.emergentagent.com';
 export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
