@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, RefreshCw } from 'lucide-react';
 import { fetchPublicProducts } from '../lib/publicData';
+import useAutoRefresh from '../lib/useAutoRefresh';
 import { useCart } from '../context/CartContext';
 
 const STEP = 0.25;
@@ -88,16 +89,18 @@ const Shop = () => {
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
 
-  const load = () => {
-    setStatus('loading');
+  const isFirst = useRef(true);
+  const load = ({ silent = false } = {}) => {
+    if (!silent) setStatus('loading');
     fetchPublicProducts()
       .then((list) => {
         setProducts(list);
         setStatus('ready');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => { if (!silent) setStatus('error'); });
   };
   useEffect(() => { load(); }, []);
+  useAutoRefresh(() => { if (!isFirst.current) load({ silent: true }); isFirst.current = false; }, 60000);
 
   return (
     <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
