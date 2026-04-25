@@ -38,7 +38,40 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <!--
+      Android 11+ (API 30+) requires apps to declare which packages they
+      can query / launch. Without this, Razorpay can't enumerate installed
+      UPI apps (GPay, PhonePe, Paytm, BHIM…) and the UPI block shows empty.
+    -->
+    <queries>
+        <!-- All apps that handle UPI deep links -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+        <!-- Browsers / payment fallback intents -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- Major UPI app package names (defensive list) -->
+        <package android:name="com.google.android.apps.nbu.paisa.user" /> <!-- Google Pay -->
+        <package android:name="com.phonepe.app" />                       <!-- PhonePe -->
+        <package android:name="net.one97.paytm" />                        <!-- Paytm -->
+        <package android:name="in.org.npci.upiapp" />                     <!-- BHIM -->
+        <package android:name="com.amazon.mShop.android.shopping" />     <!-- Amazon Pay -->
+        <package android:name="in.amazon.mShop.android.shopping" />
+        <package android:name="com.whatsapp" />                           <!-- WhatsApp Pay -->
+        <package android:name="com.mobikwik_new" />                       <!-- MobiKwik -->
+        <package android:name="com.freecharge.android" />                 <!-- Freecharge -->
+        <package android:name="com.csam.icici.bank.imobile" />            <!-- iMobile -->
+        <package android:name="com.sbi.SBIFreedomPlus" />                 <!-- SBI Yono -->
+        <package android:name="com.axis.mobile" />                        <!-- Axis -->
+        <package android:name="com.snapwork.hdfc" />                      <!-- HDFC -->
+    </queries>
 </manifest>

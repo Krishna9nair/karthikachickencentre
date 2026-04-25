@@ -10,6 +10,7 @@ import Admin from './pages/Admin';
 import Rider from './pages/Rider';
 import Auth from './pages/Auth';
 import InstallPrompt from './components/InstallPrompt';
+import OfflineGate from './components/OfflineGate';
 import { Toaster } from './components/ui/toaster';
 
 // Scrolls to element matching location.hash whenever the hash changes
@@ -60,6 +61,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <InstallPrompt />
+            <OfflineGate />
             <Toaster />
           </BrowserRouter>
         </CartProvider>

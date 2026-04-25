@@ -161,8 +161,28 @@ const CheckoutDialog = ({ open, onClose }) => {
         order_id: data.razorpay_order_id,
         name: 'ChickenCrew',
         description: 'Fresh chicken order',
-        prefill: { name: form.name, contact: form.phone },
+        prefill: {
+          name: form.name,
+          contact: form.phone,
+          email: `${form.phone}@chickencrew.shop`, // Razorpay requires email; synthesize from phone
+          method: 'upi',
+        },
         theme: { color: '#B93826' },
+        // Force-show UPI block + Cards/Wallets/Netbanking
+        method: { upi: true, card: true, wallet: true, netbanking: true },
+        // On Android, prefer UPI Intent flow (opens GPay/PhonePe/etc directly)
+        config: {
+          display: {
+            blocks: {
+              upi_block: {
+                name: 'Pay using UPI',
+                instruments: [{ method: 'upi', flows: ['intent', 'collect', 'qr'] }],
+              },
+            },
+            sequence: ['block.upi_block'],
+            preferences: { show_default_blocks: true },
+          },
+        },
         handler: async (resp) => {
           try {
             const verify = await api.post('/payments/verify', {
