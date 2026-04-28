@@ -1,38 +1,99 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Minus, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Minus, Trash2, RefreshCw, MessageCircle, Flame } from 'lucide-react';
 import { fetchPublicProducts } from '../lib/publicData';
 import useAutoRefresh from '../lib/useAutoRefresh';
 import { useCart } from '../context/CartContext';
 import { useT } from '../lib/i18n';
 
-const STEP = 0.25;
+// Hardcoded best-seller list (by product name keyword) — driven by shop owner experience
+const BEST_SELLERS = ['Curry Cut', 'Country Chicken', 'Boneless'];
+
+// Per-product preset quantity selector. Eggs use whole-piece presets;
+// everything else (chicken cuts, etc.) uses kg fractions.
+const presetsFor = (product) => {
+  const unit = (product.unit || 'kg').toLowerCase();
+  if (unit === 'piece' || /egg/i.test(product.name)) {
+    return { unit: 'piece', step: 1, min: 1, options: [6, 12, 30] };
+  }
+  return { unit: 'kg', step: 0.25, min: 0.25, options: [0.25, 0.5, 1, 2] };
+};
+
+const fmtQty = (qty, unit) => {
+  if (unit === 'piece') return `${qty} pc${qty === 1 ? '' : 's'}`;
+  if (qty < 1) return `${(qty * 1000).toFixed(0)}g`;
+  return `${qty} kg`;
+};
+
+const WHATSAPP_PHONE = '918928370724';
+
+const buildWaLink = (product, qty, unit) => {
+  const total = (qty * product.price).toFixed(0);
+  const msg = `Hi! I want to order from ChickenCrew:
+
+• ${product.name} — ${fmtQty(qty, unit)} (₹${total})
+
+Please confirm availability & delivery time.`;
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
+};
 
 const ProductCard = ({ product }) => {
   const t = useT();
   const { items, addItem, updateQty, removeItem } = useCart();
   const inCart = items.find((i) => i.id === product.id);
-  const qty = inCart?.qty || 0;
+  const cartQty = inCart?.qty || 0;
+  const presets = presetsFor(product);
 
-  const handleAdd = () => {
-    addItem({ id: product.id, name: product.name, price: product.price }, 0.5);
+  // Display qty for "buy now" actions when not yet in cart: default to first preset
+  const [pickedQty, setPickedQty] = useState(presets.options[1] || presets.options[0]);
+  const activeQty = cartQty || pickedQty;
+
+  const isBestSeller = BEST_SELLERS.some((kw) =>
+    product.name.toLowerCase().includes(kw.toLowerCase())
+  );
+
+  const handleAdd = (q = pickedQty) => {
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        unit: product.unit,
+      },
+      q
+    );
   };
-  const inc = () => updateQty(product.id, +(qty + STEP).toFixed(2));
+  const inc = () =>
+    updateQty(product.id, +(cartQty + presets.step).toFixed(2));
   const dec = () => {
-    const next = +(qty - STEP).toFixed(2);
+    const next = +(cartQty - presets.step).toFixed(2);
     if (next <= 0) removeItem(product.id);
     else updateQty(product.id, next);
   };
 
+  const total = (activeQty * (product.price || 0)).toFixed(0);
+
   return (
-    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:shadow-md hover:border-[#B93826]/30 transition-all duration-200 relative overflow-hidden">
-      {qty > 0 && (
-        <div
-          className="absolute -top-2.5 -right-2.5 bg-[#B93826] text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm"
-          data-testid={`product-qty-badge-${product.id}`}
-        >
-          IN CART
-        </div>
-      )}
+    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-sm hover:shadow-lg hover:border-[#B93826]/40 transition-all duration-200 relative overflow-hidden flex flex-col">
+      {/* Top-right badges */}
+      <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-[1]">
+        {isBestSeller && (
+          <span
+            data-testid={`product-bestseller-badge-${product.id}`}
+            className="inline-flex items-center gap-1 bg-[#F3B43E] text-[#3B2416] text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full shadow"
+          >
+            <Flame className="w-3 h-3 fill-[#B93826] text-[#B93826]" /> BEST SELLER
+          </span>
+        )}
+        {cartQty > 0 && (
+          <span
+            data-testid={`product-qty-badge-${product.id}`}
+            className="bg-[#B93826] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow"
+          >
+            IN CART
+          </span>
+        )}
+      </div>
+
       {product.image_url && (
         <div className="mb-4 aspect-video rounded-lg overflow-hidden bg-[#F3EADB]">
           <img
@@ -44,52 +105,83 @@ const ProductCard = ({ product }) => {
           />
         </div>
       )}
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-serif text-xl md:text-2xl text-[#2A1A14] leading-tight">
-          {product.name}
-        </h3>
-        <span className="shrink-0 text-[10px] tracking-[0.15em] font-semibold text-[#B93826] border border-dashed border-[#B93826] rounded-full px-2.5 py-1">
-          {t('shop.fresh_badge')}
-        </span>
-      </div>
+
+      <h3 className="font-serif text-xl md:text-2xl text-[#2A1A14] leading-tight pr-24">
+        {product.name}
+      </h3>
       {product.description && (
-        <p className="mt-3 text-sm text-[#7B5A48]">{product.description}</p>
+        <p className="mt-1.5 text-sm text-[#7B5A48] line-clamp-2">{product.description}</p>
       )}
 
-      <div className="mt-6 flex items-end justify-between gap-3">
-        <div>
-          <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48]">{t('shop.today')}</div>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="font-serif text-3xl md:text-4xl font-bold text-[#B93826]">
-              ₹{product.price ?? '—'}
-            </span>
-            <span className="text-xs text-[#7B5A48]">/{product.unit || 'kg'}</span>
-          </div>
-          {qty > 0 && product.price && (
-            <div className="mt-1 text-[11px] font-medium text-[#3B2416]">
-              {qty} {product.unit || 'kg'} ={' '}
-              <span className="font-bold text-[#2A1A14]">
-                ₹{(qty * product.price).toFixed(0)}
-              </span>
-            </div>
-          )}
+      {/* Big price */}
+      <div className="mt-4">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-serif text-4xl md:text-5xl font-bold text-[#B93826] leading-none">
+            ₹{product.price ?? '—'}
+          </span>
+          <span className="text-sm text-[#7B5A48]">/{product.unit || 'kg'}</span>
         </div>
+      </div>
 
-        {qty > 0 ? (
-          <div className="flex items-center gap-2 bg-[#B93826] rounded-full p-1">
+      {/* Quantity preset chips */}
+      {product.price > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48] mb-2">
+            CHOOSE QUANTITY
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Quantity">
+            {presets.options.map((q) => {
+              const active = activeQty === q;
+              return (
+                <button
+                  key={q}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  data-testid={`product-qty-chip-${product.id}-${q}`}
+                  onClick={() =>
+                    cartQty > 0 ? updateQty(product.id, q) : setPickedQty(q)
+                  }
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    active
+                      ? 'bg-[#B93826] text-white border-[#B93826] shadow-sm'
+                      : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/50'
+                  }`}
+                >
+                  {fmtQty(q, presets.unit)}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 text-xs text-[#3B2416]">
+            <span className="text-[#7B5A48]">Subtotal: </span>
+            <span
+              className="font-bold text-[#2A1A14]"
+              data-testid={`product-subtotal-${product.id}`}
+            >
+              ₹{total}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* CTA row */}
+      <div className="mt-5 pt-4 border-t border-[#F3EADB] flex items-center gap-2">
+        {cartQty > 0 ? (
+          <div className="flex items-center gap-1 bg-[#B93826] rounded-full p-1 mr-auto">
             <button
               onClick={dec}
-              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC] transition-colors"
+              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC]"
               aria-label="Decrease"
             >
-              {qty <= STEP ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+              {cartQty <= presets.step ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
             </button>
-            <span className="text-white text-sm font-semibold min-w-[50px] text-center">
-              {qty} kg
+            <span className="text-white text-xs font-semibold min-w-[60px] text-center">
+              {fmtQty(cartQty, presets.unit)}
             </span>
             <button
               onClick={inc}
-              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC] transition-colors"
+              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC]"
               aria-label="Increase"
             >
               <Plus className="w-4 h-4" />
@@ -97,14 +189,26 @@ const ProductCard = ({ product }) => {
           </div>
         ) : (
           <button
-            onClick={handleAdd}
+            onClick={() => handleAdd()}
             disabled={!product.price}
             data-testid={`product-add-btn-${product.id}`}
-            className="flex items-center gap-1.5 px-5 py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" /> {t('shop.add')}
           </button>
         )}
+
+        <a
+          href={buildWaLink(product, activeQty, presets.unit)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Order ${product.name} on WhatsApp`}
+          title="Order on WhatsApp"
+          data-testid={`product-wa-btn-${product.id}`}
+          className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 text-white shadow-md transition-all"
+        >
+          <MessageCircle className="w-5 h-5 fill-white" strokeWidth={1.5} />
+        </a>
       </div>
     </div>
   );
@@ -128,6 +232,15 @@ const Shop = () => {
   useEffect(() => { load(); }, []);
   useAutoRefresh(() => { if (!isFirst.current) load({ silent: true }); isFirst.current = false; }, 60000);
 
+  // Sort: best sellers first, then sort_order
+  const sorted = [...products].sort((a, b) => {
+    const aBest = BEST_SELLERS.some((kw) => a.name.toLowerCase().includes(kw.toLowerCase()));
+    const bBest = BEST_SELLERS.some((kw) => b.name.toLowerCase().includes(kw.toLowerCase()));
+    if (aBest && !bBest) return -1;
+    if (!aBest && bBest) return 1;
+    return 0;
+  });
+
   return (
     <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
       <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -142,14 +255,12 @@ const Shop = () => {
         {status === 'loading' ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="shop-loading">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-52 rounded-2xl bg-white border border-[#EADFCF] animate-pulse" />
+              <div key={i} className="h-72 rounded-2xl bg-white border border-[#EADFCF] animate-pulse" />
             ))}
           </div>
         ) : status === 'error' ? (
           <div className="text-center py-10" data-testid="shop-error">
-            <div className="text-[#7B5A48] mb-4">
-              {t('shop.error')}
-            </div>
+            <div className="text-[#7B5A48] mb-4">{t('shop.error')}</div>
             <button
               onClick={load}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium shadow-sm transition-colors"
@@ -158,11 +269,11 @@ const Shop = () => {
               <RefreshCw className="w-4 h-4" /> {t('price.retry')}
             </button>
           </div>
-        ) : products.length === 0 ? (
-          <div className="text-center text-[#7B5A48]">{t('shop.empty')}</div>
+        ) : sorted.length === 0 ? (
+          <div className="text-center text-[#7B5A48] py-10">{t('shop.empty')}</div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            {products.map((p) => (
+            {sorted.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>

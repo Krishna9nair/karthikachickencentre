@@ -1,11 +1,34 @@
 import React, { useState } from 'react';
-import { X, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import CheckoutDialog from './CheckoutDialog';
+
+const WHATSAPP_PHONE = '918928370724';
+
+const isPiece = (item) => (item.unit || 'kg').toLowerCase() === 'piece';
+const stepFor = (item) => (isPiece(item) ? 1 : 0.25);
+const fmtQty = (item) => {
+  if (isPiece(item)) return `${item.qty} pc${item.qty === 1 ? '' : 's'}`;
+  if (item.qty < 1) return `${(item.qty * 1000).toFixed(0)}g`;
+  return `${item.qty} kg`;
+};
 
 const CartDrawer = () => {
   const { items, isOpen, setIsOpen, updateQty, removeItem, subtotal } = useCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  const waOrderLink = (() => {
+    if (items.length === 0) return null;
+    const lines = items
+      .map(
+        (i) =>
+          `• ${i.name} — ${fmtQty(i)} (₹${(i.price * i.qty).toFixed(0)})`
+      )
+      .join('\n');
+    const total = subtotal.toFixed(0);
+    const msg = `Hi! I want to order from ChickenCrew:\n\n${lines}\n\nTotal: ₹${total}\n\nPlease confirm availability & delivery time.`;
+    return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
+  })();
 
   return (
     <>
@@ -63,20 +86,20 @@ const CartDrawer = () => {
                       {item.name}
                     </div>
                     <div className="text-xs text-[#7B5A48] mt-0.5">
-                      ₹{item.price}/kg
+                      ₹{item.price}/{item.unit || 'kg'}
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <button
-                        onClick={() => updateQty(item.id, +(item.qty - 0.25).toFixed(2))}
+                        onClick={() => updateQty(item.id, +(item.qty - stepFor(item)).toFixed(2))}
                         className="w-7 h-7 rounded-full border border-[#EADFCF] flex items-center justify-center hover:border-[#B93826] text-[#3B2416]"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="text-sm font-medium w-14 text-center text-[#2A1A14]">
-                        {item.qty} kg
+                      <span className="text-sm font-medium w-16 text-center text-[#2A1A14]">
+                        {fmtQty(item)}
                       </span>
                       <button
-                        onClick={() => updateQty(item.id, +(item.qty + 0.25).toFixed(2))}
+                        onClick={() => updateQty(item.id, +(item.qty + stepFor(item)).toFixed(2))}
                         className="w-7 h-7 rounded-full border border-[#EADFCF] flex items-center justify-center hover:border-[#B93826] text-[#3B2416]"
                       >
                         <Plus className="w-3 h-3" />
@@ -111,12 +134,22 @@ const CartDrawer = () => {
             </div>
             <button
               onClick={() => setCheckoutOpen(true)}
+              data-testid="cart-checkout-btn"
               className="w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium shadow-sm transition-colors"
             >
-              Checkout
+              Checkout & Pay
             </button>
+            <a
+              href={waOrderLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="cart-whatsapp-btn"
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 py-3 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-medium shadow-sm transition-colors"
+            >
+              <MessageCircle className="w-4 h-4 fill-white" /> Order on WhatsApp
+            </a>
             <p className="text-[11px] text-center text-[#7B5A48] mt-2">
-              Pay instantly. Order ready before you reach the shop.
+              UPI, Card, COD or just WhatsApp us — your choice.
             </p>
           </div>
         )}
