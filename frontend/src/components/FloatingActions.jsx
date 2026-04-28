@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, Phone, X } from 'lucide-react';
 import { api } from '../lib/api';
 
-// Hardcoded fallback so the FAB still appears even if the shop endpoint is unreachable.
+// Hardcoded fallback so the buttons still appear even if the shop endpoint is unreachable.
 const FALLBACK_PHONE = '8928370724';
 
-// Floating WhatsApp chat button — pulls phone from /api/public/shop.
-const WhatsAppFAB = () => {
+// Floating contact stack: WhatsApp + Call.
+const FloatingActions = () => {
   const [phone, setPhone] = useState(null);
   const [tipDismissed, setTipDismissed] = useState(false);
   const [showTip, setShowTip] = useState(false);
@@ -18,7 +18,6 @@ const WhatsAppFAB = () => {
       if (!digits) return null;
       return digits.length === 10 ? `91${digits}` : digits;
     };
-    // Optimistic fallback so the button shows immediately
     setPhone(sanitize(FALLBACK_PHONE));
     (async () => {
       try {
@@ -26,9 +25,7 @@ const WhatsAppFAB = () => {
         if (cancelled) return;
         const e164 = sanitize(data?.contact_phone);
         if (e164) setPhone(e164);
-      } catch (_) {
-        // keep fallback
-      }
+      } catch (_) {}
     })();
     const dismissed = localStorage.getItem('cc_wa_tip_dismissed');
     if (!dismissed) setTimeout(() => setShowTip(true), 4000);
@@ -38,9 +35,9 @@ const WhatsAppFAB = () => {
 
   if (!phone) return null;
 
-  const message =
-    'Hi! I want to place an order from ChickenCrew.';
-  const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  const waMsg = 'Hi! I want to place an order from ChickenCrew.';
+  const waHref = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
+  const telHref = `tel:+${phone}`;
 
   const dismissTip = (e) => {
     e.preventDefault();
@@ -51,9 +48,12 @@ const WhatsAppFAB = () => {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-2" data-testid="whatsapp-fab">
+    <div
+      className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3"
+      data-testid="floating-actions"
+    >
       {showTip && !tipDismissed && (
-        <div className="bg-white border border-[#EADFCF] rounded-2xl shadow-lg px-4 py-3 max-w-[230px] text-sm text-[#2A1A14] relative">
+        <div className="bg-white border border-[#EADFCF] rounded-2xl shadow-lg px-4 py-3 max-w-[240px] text-sm text-[#2A1A14] relative">
           <button
             onClick={dismissTip}
             aria-label="Dismiss"
@@ -61,13 +61,26 @@ const WhatsAppFAB = () => {
           >
             <X className="w-3 h-3" />
           </button>
-          <div className="font-medium pr-3">Need help? Chat with us on WhatsApp</div>
+          <div className="font-medium pr-3">Need help? Tap to chat or call.</div>
           <div className="text-xs text-[#7B5A48] mt-0.5">Reply usually within 5 min</div>
           <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-[#EADFCF] rotate-45" />
         </div>
       )}
+
+      {/* Call */}
       <a
-        href={href}
+        href={telHref}
+        aria-label="Call shop"
+        title="Call shop"
+        data-testid="floating-call-btn"
+        className="w-12 h-12 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 shadow-lg flex items-center justify-center transition-all"
+      >
+        <Phone className="w-5 h-5 text-white" strokeWidth={2.2} />
+      </a>
+
+      {/* WhatsApp */}
+      <a
+        href={waHref}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
@@ -86,4 +99,4 @@ const WhatsAppFAB = () => {
   );
 };
 
-export default WhatsAppFAB;
+export default FloatingActions;

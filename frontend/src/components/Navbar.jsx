@@ -18,6 +18,7 @@ const Navbar = () => {
     { label: t('nav.home'), to: '/' },
     { label: t('nav.shop'), to: '/#shop' },
     { label: t('nav.todays_price'), to: '/#price' },
+    { label: t('nav.visit'), to: '/#visit' },
     {
       label: isAdmin ? t('nav.admin') : t('nav.admin_login'),
       to: isAdmin ? '/admin' : '/auth',

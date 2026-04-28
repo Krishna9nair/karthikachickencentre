@@ -22,6 +22,7 @@ const DICT = {
     'hero.cta_call': 'Call shop',
     // Today's Price
     'price.eyebrow': 'DAILY BOARD',
+    'price.live_badge': '🔥 LIVE TODAY',
     'price.title': "Today's Price",
     'price.fresh_today': 'Fresh Today',
     'price.per_kg': '₹ / kg',
@@ -82,6 +83,15 @@ const DICT = {
     'hero.stat_fresh': 'Fresh stock',
     'hero.stat_upi': 'Easy payment',
     'hero.open_today': 'Open today!',
+    // Visit Shop
+    'visit.eyebrow': 'VISIT US',
+    'visit.title': 'Find our shop',
+    'visit.tap_for_map': 'Tap to open in Google Maps',
+    'visit.directions': 'Directions',
+    'visit.call': 'Call shop',
+    'visit.hours_label': 'Open daily',
+    'visit.hours_value': '7:00 AM – 10:00 PM',
+    'nav.visit': 'Visit Us',
   },
   hi: {
     'nav.home': 'होम',
@@ -99,6 +109,7 @@ const DICT = {
     'hero.cta_shop': 'अभी ऑर्डर करें',
     'hero.cta_call': 'दुकान पर कॉल करें',
     'price.eyebrow': 'दैनिक बोर्ड',
+    'price.live_badge': '🔥 आज का भाव',
     'price.title': 'आज का भाव',
     'price.fresh_today': 'आज ताज़ा',
     'price.per_kg': '₹ / किलो',
@@ -154,6 +165,14 @@ const DICT = {
     'hero.stat_fresh': 'ताज़ा स्टॉक',
     'hero.stat_upi': 'आसान भुगतान',
     'hero.open_today': 'आज खुला है!',
+    'visit.eyebrow': 'हमसे मिलें',
+    'visit.title': 'हमारी दुकान खोजें',
+    'visit.tap_for_map': 'Google Maps में खोलने के लिए टैप करें',
+    'visit.directions': 'दिशा',
+    'visit.call': 'दुकान पर कॉल',
+    'visit.hours_label': 'रोज़ खुला',
+    'visit.hours_value': 'सुबह 7:00 – रात 10:00',
+    'nav.visit': 'मिलें',
   },
 };
 

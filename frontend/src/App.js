@@ -12,7 +12,7 @@ import Rider from './pages/Rider';
 import Auth from './pages/Auth';
 import InstallPrompt from './components/InstallPrompt';
 import OfflineGate from './components/OfflineGate';
-import WhatsAppFAB from './components/WhatsAppFAB';
+import FloatingActions from './components/FloatingActions';
 import { Toaster } from './components/ui/toaster';
 
 // Scrolls to element matching location.hash whenever the hash changes
@@ -65,7 +65,7 @@ function App() {
               </Routes>
               <InstallPrompt />
               <OfflineGate />
-              <WhatsAppFAB />
+              <FloatingActions />
               <Toaster />
             </BrowserRouter>
           </CartProvider>

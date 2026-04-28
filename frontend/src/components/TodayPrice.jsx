@@ -60,10 +60,17 @@ const TodayPrice = () => {
     <section id="price" className="bg-[#FAF4EC] py-10 md:py-20">
       <div className="max-w-5xl mx-auto px-5 md:px-8">
         <div className="text-center mb-6 md:mb-10">
-          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
-            {t('price.eyebrow')}
+          <div
+            className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.25em] font-bold text-white bg-[#B93826] px-3 py-1.5 rounded-full shadow-md relative overflow-hidden"
+            data-testid="live-today-badge"
+          >
+            <span className="absolute inset-0 bg-white/30 animate-pulse" />
+            <span className="relative flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              {t('price.live_badge')}
+            </span>
           </div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">{t('price.title')}</h2>
+          <h2 className="mt-3 font-serif text-4xl md:text-5xl text-[#2A1A14]">{t('price.title')}</h2>
           <div className="mt-2 text-sm text-[#7B5A48]">{today}</div>
         </div>
 

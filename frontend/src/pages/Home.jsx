@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import TodayPrice from '../components/TodayPrice';
 import Shop from '../components/Shop';
+import VisitShop from '../components/VisitShop';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
 
@@ -13,6 +14,7 @@ const Home = () => {
       <Hero />
       <TodayPrice />
       <Shop />
+      <VisitShop />
       <Footer />
       <CartDrawer />
     </div>
