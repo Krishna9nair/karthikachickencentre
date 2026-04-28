@@ -2,16 +2,9 @@ import React, { useState } from 'react';
 import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import CheckoutDialog from './CheckoutDialog';
+import { presetsFor, formatQty, calcSubtotal, normalizeUnit, UNIT_SHORT } from '../lib/units';
 
 const WHATSAPP_PHONE = '918928370724';
-
-const isPiece = (item) => (item.unit || 'kg').toLowerCase() === 'piece';
-const stepFor = (item) => (isPiece(item) ? 1 : 0.25);
-const fmtQty = (item) => {
-  if (isPiece(item)) return `${item.qty} pc${item.qty === 1 ? '' : 's'}`;
-  if (item.qty < 1) return `${(item.qty * 1000).toFixed(0)}g`;
-  return `${item.qty} kg`;
-};
 
 const CartDrawer = () => {
   const { items, isOpen, setIsOpen, updateQty, removeItem, subtotal } = useCart();
@@ -20,10 +13,7 @@ const CartDrawer = () => {
   const waOrderLink = (() => {
     if (items.length === 0) return null;
     const lines = items
-      .map(
-        (i) =>
-          `• ${i.name} — ${fmtQty(i)} (₹${(i.price * i.qty).toFixed(0)})`
-      )
+      .map((i) => `• ${i.name} — ${formatQty(i.qty, i.unit)} (₹${calcSubtotal(i.price, i.qty)})`)
       .join('\n');
     const total = subtotal.toFixed(0);
     const msg = `Hi! I want to order from ChickenCrew:\n\n${lines}\n\nTotal: ₹${total}\n\nPlease confirm availability & delivery time.`;
@@ -86,20 +76,20 @@ const CartDrawer = () => {
                       {item.name}
                     </div>
                     <div className="text-xs text-[#7B5A48] mt-0.5">
-                      ₹{item.price}/{item.unit || 'kg'}
+                      ₹{item.price}/{UNIT_SHORT[normalizeUnit(item.unit)]}
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <button
-                        onClick={() => updateQty(item.id, +(item.qty - stepFor(item)).toFixed(2))}
+                        onClick={() => updateQty(item.id, +(item.qty - presetsFor(item.unit).step).toFixed(2))}
                         className="w-7 h-7 rounded-full border border-[#EADFCF] flex items-center justify-center hover:border-[#B93826] text-[#3B2416]"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="text-sm font-medium w-16 text-center text-[#2A1A14]">
-                        {fmtQty(item)}
+                        {formatQty(item.qty, item.unit)}
                       </span>
                       <button
-                        onClick={() => updateQty(item.id, +(item.qty + stepFor(item)).toFixed(2))}
+                        onClick={() => updateQty(item.id, +(item.qty + presetsFor(item.unit).step).toFixed(2))}
                         className="w-7 h-7 rounded-full border border-[#EADFCF] flex items-center justify-center hover:border-[#B93826] text-[#3B2416]"
                       >
                         <Plus className="w-3 h-3" />
@@ -108,7 +98,7 @@ const CartDrawer = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-serif font-bold text-[#B93826]">
-                      ₹{(item.price * item.qty).toFixed(0)}
+                      ₹{calcSubtotal(item.price, item.qty)}
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}

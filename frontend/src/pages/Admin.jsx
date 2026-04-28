@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { api } from '../lib/api';
 import { useToast } from '../hooks/use-toast';
+import { UNITS, UNIT_LABEL, isValidUnit, normalizeUnit } from '../lib/units';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -148,11 +149,15 @@ const Admin = () => {
 
   const addProduct = async () => {
     if (!newProduct.name.trim()) return;
+    if (!isValidUnit(newProduct.unit)) {
+      toast({ title: 'Invalid unit', description: 'Choose kg, dzn, or piece.' });
+      return;
+    }
     const maxSort = products.reduce((m, p) => Math.max(m, p.sort_order || 0), 0);
     const { error } = await supabase.from('products').insert({
       name: newProduct.name,
       description: newProduct.description,
-      unit: newProduct.unit,
+      unit: normalizeUnit(newProduct.unit),
       sort_order: maxSort + 1,
       is_active: true,
     });
@@ -161,6 +166,22 @@ const Admin = () => {
       toast({ title: 'Product added' });
       setShowAddProduct(false);
       setNewProduct({ name: '', description: '', unit: 'kg' });
+      loadProducts();
+    }
+  };
+
+  const updateUnit = async (product_id, unit) => {
+    if (!isValidUnit(unit)) {
+      toast({ title: 'Invalid unit', description: 'Choose kg, dzn, or piece.' });
+      return;
+    }
+    const { error } = await supabase
+      .from('products')
+      .update({ unit: normalizeUnit(unit) })
+      .eq('id', product_id);
+    if (error) toast({ title: 'Update failed', description: error.message });
+    else {
+      toast({ title: 'Unit updated' });
       loadProducts();
     }
   };
@@ -345,13 +366,27 @@ const Admin = () => {
                   value={newProduct.name}
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                   className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  data-testid="admin-new-product-name"
                 />
                 <input
                   placeholder="Description"
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm sm:col-span-2"
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  data-testid="admin-new-product-desc"
                 />
+                <select
+                  value={newProduct.unit}
+                  onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm bg-white"
+                  data-testid="admin-new-product-unit"
+                >
+                  {UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      Sold by: {UNIT_LABEL[u]} ({u})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="mt-3 flex gap-2 justify-end">
                 <button onClick={() => setShowAddProduct(false)} className="px-4 py-1.5 rounded-full border border-[#EADFCF] text-sm">Cancel</button>
@@ -414,11 +449,22 @@ const Admin = () => {
                       className="text-left"
                     >
                       <span className="font-serif font-bold text-[#B93826] text-xl">₹{priceMap[p.id] ?? '—'}</span>
-                      <span className="text-xs text-[#7B5A48] ml-1">/{p.unit}</span>
+                      <span className="text-xs text-[#7B5A48] ml-1">/{normalizeUnit(p.unit)}</span>
                       <Pencil className="w-3 h-3 inline ml-2 text-[#7B5A48]" />
                     </button>
                   )}
                 </div>
+                <select
+                  value={normalizeUnit(p.unit)}
+                  onChange={(e) => updateUnit(p.id, e.target.value)}
+                  className="px-2.5 py-1.5 rounded-full border border-[#EADFCF] text-xs bg-white text-[#3B2416] hover:border-[#B93826]/40 transition-colors"
+                  title="Change unit"
+                  data-testid={`admin-unit-select-${p.id}`}
+                >
+                  {UNITS.map((u) => (
+                    <option key={u} value={u}>{UNIT_LABEL[u]}</option>
+                  ))}
+                </select>
                 <label className="flex items-center gap-2 text-xs text-[#7B5A48]">
                   <input
                     type="checkbox"

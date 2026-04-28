@@ -4,33 +4,24 @@ import { fetchPublicProducts } from '../lib/publicData';
 import useAutoRefresh from '../lib/useAutoRefresh';
 import { useCart } from '../context/CartContext';
 import { useT } from '../lib/i18n';
+import {
+  presetsFor,
+  formatQty,
+  calcSubtotal,
+  normalizeUnit,
+  UNIT_SHORT,
+} from '../lib/units';
+import QuantitySelector from './QuantitySelector';
 
-// Hardcoded best-seller list (by product name keyword) — driven by shop owner experience
+// Hardcoded best-seller list (by product name keyword)
 const BEST_SELLERS = ['Curry Cut', 'Country Chicken', 'Boneless'];
-
-// Per-product preset quantity selector. Eggs use whole-piece presets;
-// everything else (chicken cuts, etc.) uses kg fractions.
-const presetsFor = (product) => {
-  const unit = (product.unit || 'kg').toLowerCase();
-  if (unit === 'piece' || /egg/i.test(product.name)) {
-    return { unit: 'piece', step: 1, min: 1, options: [6, 12, 30] };
-  }
-  return { unit: 'kg', step: 0.25, min: 0.25, options: [0.25, 0.5, 1, 2] };
-};
-
-const fmtQty = (qty, unit) => {
-  if (unit === 'piece') return `${qty} pc${qty === 1 ? '' : 's'}`;
-  if (qty < 1) return `${(qty * 1000).toFixed(0)}g`;
-  return `${qty} kg`;
-};
-
 const WHATSAPP_PHONE = '918928370724';
 
-const buildWaLink = (product, qty, unit) => {
-  const total = (qty * product.price).toFixed(0);
+const buildWaLink = (product, qty) => {
+  const subtotal = calcSubtotal(product.price, qty);
   const msg = `Hi! I want to order from ChickenCrew:
 
-• ${product.name} — ${fmtQty(qty, unit)} (₹${total})
+• ${product.name} — ${formatQty(qty, product.unit)} (₹${subtotal})
 
 Please confirm availability & delivery time.`;
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
@@ -41,10 +32,13 @@ const ProductCard = ({ product }) => {
   const { items, addItem, updateQty, removeItem } = useCart();
   const inCart = items.find((i) => i.id === product.id);
   const cartQty = inCart?.qty || 0;
-  const presets = presetsFor(product);
+  const presets = presetsFor(product.unit);
+  const unit = presets.unit;
 
-  // Display qty for "buy now" actions when not yet in cart: default to first preset
-  const [pickedQty, setPickedQty] = useState(presets.options[1] || presets.options[0]);
+  // When item is not in cart, show the user's currently picked preset.
+  const [pickedQty, setPickedQty] = useState(
+    presets.options[1]?.value || presets.options[0].value
+  );
   const activeQty = cartQty || pickedQty;
 
   const isBestSeller = BEST_SELLERS.some((kw) =>
@@ -57,20 +51,22 @@ const ProductCard = ({ product }) => {
         id: product.id,
         name: product.name,
         price: product.price,
-        unit: product.unit,
+        unit: normalizeUnit(product.unit),
       },
       q
     );
   };
-  const inc = () =>
-    updateQty(product.id, +(cartQty + presets.step).toFixed(2));
+  const inc = () => updateQty(product.id, +(cartQty + presets.step).toFixed(2));
   const dec = () => {
     const next = +(cartQty - presets.step).toFixed(2);
     if (next <= 0) removeItem(product.id);
     else updateQty(product.id, next);
   };
 
-  const total = (activeQty * (product.price || 0)).toFixed(0);
+  const onChangeQty = (q) => {
+    if (cartQty > 0) updateQty(product.id, q);
+    else setPickedQty(q);
+  };
 
   return (
     <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-sm hover:shadow-lg hover:border-[#B93826]/40 transition-all duration-200 relative overflow-hidden flex flex-col">
@@ -119,49 +115,19 @@ const ProductCard = ({ product }) => {
           <span className="font-serif text-4xl md:text-5xl font-bold text-[#B93826] leading-none">
             ₹{product.price ?? '—'}
           </span>
-          <span className="text-sm text-[#7B5A48]">/{product.unit || 'kg'}</span>
+          <span className="text-sm text-[#7B5A48]">/{UNIT_SHORT[unit]}</span>
         </div>
       </div>
 
-      {/* Quantity preset chips */}
+      {/* Quantity preset chips (re-usable component) */}
       {product.price > 0 && (
         <div className="mt-4">
-          <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48] mb-2">
-            CHOOSE QUANTITY
-          </div>
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Quantity">
-            {presets.options.map((q) => {
-              const active = activeQty === q;
-              return (
-                <button
-                  key={q}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  data-testid={`product-qty-chip-${product.id}-${q}`}
-                  onClick={() =>
-                    cartQty > 0 ? updateQty(product.id, q) : setPickedQty(q)
-                  }
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    active
-                      ? 'bg-[#B93826] text-white border-[#B93826] shadow-sm'
-                      : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/50'
-                  }`}
-                >
-                  {fmtQty(q, presets.unit)}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 text-xs text-[#3B2416]">
-            <span className="text-[#7B5A48]">Subtotal: </span>
-            <span
-              className="font-bold text-[#2A1A14]"
-              data-testid={`product-subtotal-${product.id}`}
-            >
-              ₹{total}
-            </span>
-          </div>
+          <QuantitySelector
+            product={product}
+            value={activeQty}
+            onChange={onChangeQty}
+            testIdPrefix="product-qty"
+          />
         </div>
       )}
 
@@ -177,7 +143,7 @@ const ProductCard = ({ product }) => {
               {cartQty <= presets.step ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
             </button>
             <span className="text-white text-xs font-semibold min-w-[60px] text-center">
-              {fmtQty(cartQty, presets.unit)}
+              {formatQty(cartQty, unit)}
             </span>
             <button
               onClick={inc}
@@ -199,7 +165,7 @@ const ProductCard = ({ product }) => {
         )}
 
         <a
-          href={buildWaLink(product, activeQty, presets.unit)}
+          href={buildWaLink(product, activeQty)}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Order ${product.name} on WhatsApp`}
