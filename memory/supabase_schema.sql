@@ -188,8 +188,7 @@ INSERT INTO public.products (name, description, unit, sort_order) VALUES
   ('Chicken Legs', 'Juicy whole legs with thighs', 'kg', 5),
   ('Chicken Wings', 'Tender wings, ideal for fry & grill', 'kg', 6),
   ('Chicken Liver', 'Fresh liver, cleaned', 'kg', 7),
-  ('Country Chicken', 'Free-range desi murgi', 'kg', 8),
-('Eggs', 'Organic farm fresh eggs', 'dzn' , 9);
+  ('Country Chicken', 'Free-range desi murgi', 'kg', 8);
 
 INSERT INTO public.daily_prices (product_id, price_per_unit, price_date)
 SELECT id, 
@@ -202,7 +201,7 @@ SELECT id,
     WHEN 'Chicken Wings' THEN 250
     WHEN 'Chicken Liver' THEN 180
     WHEN 'Country Chicken' THEN 480
-    WHEN 'Eggs' THEN 72
+   
   END,
   CURRENT_DATE
 FROM public.products;-- 1. Restrict shop_settings SELECT to admins only

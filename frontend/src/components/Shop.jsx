@@ -24,10 +24,24 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:shadow-md hover:border-[#B93826]/30 transition-all duration-200">
+    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)] hover:shadow-md hover:border-[#B93826]/30 transition-all duration-200 relative overflow-hidden">
+      {qty > 0 && (
+        <div
+          className="absolute -top-2.5 -right-2.5 bg-[#B93826] text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm"
+          data-testid={`product-qty-badge-${product.id}`}
+        >
+          IN CART
+        </div>
+      )}
       {product.image_url && (
         <div className="mb-4 aspect-video rounded-lg overflow-hidden bg-[#F3EADB]">
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
         </div>
       )}
       <div className="flex items-start justify-between gap-3">
@@ -46,11 +60,19 @@ const ProductCard = ({ product }) => {
         <div>
           <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48]">{t('shop.today')}</div>
           <div className="flex items-baseline gap-1 mt-1">
-            <span className="font-serif text-3xl font-bold text-[#B93826]">
+            <span className="font-serif text-3xl md:text-4xl font-bold text-[#B93826]">
               ₹{product.price ?? '—'}
             </span>
             <span className="text-xs text-[#7B5A48]">/{product.unit || 'kg'}</span>
           </div>
+          {qty > 0 && product.price && (
+            <div className="mt-1 text-[11px] font-medium text-[#3B2416]">
+              {qty} {product.unit || 'kg'} ={' '}
+              <span className="font-bold text-[#2A1A14]">
+                ₹{(qty * product.price).toFixed(0)}
+              </span>
+            </div>
+          )}
         </div>
 
         {qty > 0 ? (
@@ -77,7 +99,8 @@ const ProductCard = ({ product }) => {
           <button
             onClick={handleAdd}
             disabled={!product.price}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-medium shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid={`product-add-btn-${product.id}`}
+            className="flex items-center gap-1.5 px-5 py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" /> {t('shop.add')}
           </button>

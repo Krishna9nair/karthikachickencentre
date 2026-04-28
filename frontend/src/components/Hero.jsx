@@ -68,6 +68,9 @@ const Hero = () => {
               <img
                 src="https://karthikachickencentre.shop/assets/hero-rooster-d4bxhC-A.jpg"
                 alt="Fresh farm rooster illustration"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
                 className="w-full h-auto object-contain max-h-[260px] sm:max-h-[320px] md:max-h-none"
                 onError={(e) => {
                   e.target.src =
