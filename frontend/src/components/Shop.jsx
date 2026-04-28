@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Minus, Trash2, RefreshCw, MessageCircle, Flame } from 'lucide-react';
 import { fetchPublicProducts } from '../lib/publicData';
 import useAutoRefresh from '../lib/useAutoRefresh';
@@ -27,7 +27,7 @@ Please confirm availability & delivery time.`;
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
 };
 
-const ProductCard = ({ product }) => {
+const ProductCard = React.memo(function ProductCard({ product }) {
   const t = useT();
   const { items, addItem, updateQty, removeItem } = useCart();
   const inCart = items.find((i) => i.id === product.id);
@@ -178,7 +178,7 @@ const ProductCard = ({ product }) => {
       </div>
     </div>
   );
-};
+});
 
 const Shop = () => {
   const t = useT();
@@ -188,7 +188,9 @@ const Shop = () => {
   const isFirst = useRef(true);
   const load = ({ silent = false } = {}) => {
     if (!silent) setStatus('loading');
-    fetchPublicProducts()
+    fetchPublicProducts({
+      onRevalidate: (fresh) => setProducts(fresh),
+    })
       .then((list) => {
         setProducts(list);
         setStatus('ready');
@@ -198,14 +200,19 @@ const Shop = () => {
   useEffect(() => { load(); }, []);
   useAutoRefresh(() => { if (!isFirst.current) load({ silent: true }); isFirst.current = false; }, 60000);
 
-  // Sort: best sellers first, then sort_order
-  const sorted = [...products].sort((a, b) => {
-    const aBest = BEST_SELLERS.some((kw) => a.name.toLowerCase().includes(kw.toLowerCase()));
-    const bBest = BEST_SELLERS.some((kw) => b.name.toLowerCase().includes(kw.toLowerCase()));
-    if (aBest && !bBest) return -1;
-    if (!aBest && bBest) return 1;
-    return 0;
-  });
+  // Sort: best sellers first, then sort_order. Memoized to avoid re-sorting
+  // on every render (only re-runs when `products` array reference changes).
+  const sorted = useMemo(
+    () =>
+      [...products].sort((a, b) => {
+        const aBest = BEST_SELLERS.some((kw) => a.name.toLowerCase().includes(kw.toLowerCase()));
+        const bBest = BEST_SELLERS.some((kw) => b.name.toLowerCase().includes(kw.toLowerCase()));
+        if (aBest && !bBest) return -1;
+        if (!aBest && bBest) return 1;
+        return 0;
+      }),
+    [products]
+  );
 
   return (
     <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
