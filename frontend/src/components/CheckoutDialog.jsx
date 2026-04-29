@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, MapPin, Loader2, Smartphone, Banknote } from 'lucide-react';
+import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { useCart } from '../context/CartContext';
