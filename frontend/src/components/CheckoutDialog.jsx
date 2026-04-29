@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, MapPin, Loader2, Smartphone, Banknote } from 'lucide-react';
+import { X, MapPin, Loader2, Smartphone, Banknote } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
+import Bill from './Bill';
 
 const CheckoutDialog = ({ open, onClose }) => {
   const { items, subtotal, clear, setIsOpen } = useCart();
@@ -15,6 +16,9 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [geoStatus, setGeoStatus] = useState('idle'); // idle | loading | ok | error
   const [orderDetails, setOrderDetails] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('online'); // online | cod
+  // Snapshot the cart at order placement so the Bill is stable even after
+  // the parent cart state is cleared (or items change).
+  const [orderSnapshot, setOrderSnapshot] = useState(null);
 
   if (!open) return null;
 
@@ -132,11 +136,25 @@ const CheckoutDialog = ({ open, onClose }) => {
       notes: '',
     };
 
+    // Capture immutable snapshot of cart for the Bill / admin notification
+    const snapshot = {
+      items: items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        qty: i.qty,
+        price: i.price,
+        unit: i.unit || 'kg',
+      })),
+      subtotal,
+      customer: { name: form.name, phone: form.phone, address: form.address },
+    };
+
     // Cash on delivery path — no Razorpay
     if (paymentMethod === 'cod') {
       try {
         const resp = await api.post('/orders/cod', payload);
         setOrderDetails(resp.data.order);
+        setOrderSnapshot(snapshot);
         setStep('success');
       } catch (err) {
         toast({
@@ -192,6 +210,7 @@ const CheckoutDialog = ({ open, onClose }) => {
               local_order_id: data.local_order_id,
             });
             setOrderDetails(verify.data.order);
+            setOrderSnapshot(snapshot);
             setStep('success');
           } catch (err) {
             toast({ title: 'Payment verification failed', description: err?.response?.data?.detail || err.message });
@@ -222,6 +241,7 @@ const CheckoutDialog = ({ open, onClose }) => {
     setLocation(null);
     setGeoStatus('idle');
     setOrderDetails(null);
+    setOrderSnapshot(null);
     setPaymentMethod('online');
     onClose();
     setIsOpen(false);
@@ -405,33 +425,15 @@ const CheckoutDialog = ({ open, onClose }) => {
           </div>
         )}
 
-        {step === 'success' && (
-          <div className="p-8 flex flex-col items-center text-center">
-            <CheckCircle2 className="w-16 h-16 text-emerald-600" />
-            <h4 className="mt-4 font-serif text-2xl text-[#2A1A14]">Order placed!</h4>
-            <p className="text-sm text-[#7B5A48] mt-1">
-              We'll prep your cuts. You'll get a call on {form.phone}.
-            </p>
-            {orderDetails?.id && (
-              <div className="text-xs text-[#7B5A48] mt-1">
-                Order ID: <span className="font-mono">{orderDetails.id.slice(0, 8)}</span>
-              </div>
-            )}
-            <div className="mt-5 rounded-xl bg-[#F3EADB] px-5 py-3">
-              <div className="text-xs text-[#7B5A48]">
-                {paymentMethod === 'cod' ? 'Pay on delivery' : 'Paid'}
-              </div>
-              <div className="font-serif text-2xl font-bold text-[#B93826]">
-                ₹{subtotal.toFixed(0)}
-              </div>
-            </div>
-            <button
-              onClick={handleDone}
-              className="mt-6 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium"
-            >
-              Done
-            </button>
-          </div>
+        {step === 'success' && orderSnapshot && (
+          <Bill
+            order={orderDetails}
+            items={orderSnapshot.items}
+            subtotal={orderSnapshot.subtotal}
+            customer={orderSnapshot.customer}
+            paymentMethod={paymentMethod}
+            onDone={handleDone}
+          />
         )}
       </div>
     </div>

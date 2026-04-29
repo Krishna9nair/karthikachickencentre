@@ -38,3 +38,19 @@ input[type=number] { -moz-appearance: textfield; }
 /* Hide scrollbar but keep scroll for mobile nav */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+/* Print: only show the bill receipt, hide everything else */
+@media print {
+  body { background: #fff !important; }
+  body * { visibility: hidden !important; }
+  [data-testid="bill-receipt"],
+  [data-testid="bill-receipt"] * { visibility: visible !important; }
+  [data-testid="bill-receipt"] {
+    position: absolute !important;
+    left: 0; top: 0;
+    width: 100% !important;
+    box-shadow: none !important;
+    border-color: #000 !important;
+  }
+}

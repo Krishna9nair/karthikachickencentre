@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { MessageCircle, Phone, X } from 'lucide-react';
 import { api } from '../lib/api';
+import { useCart } from '../context/CartContext';
 
 // Hardcoded fallback so the buttons still appear even if the shop endpoint is unreachable.
 const FALLBACK_PHONE = '9619417452';
 
-// Floating contact stack: WhatsApp + Call.
+// Floating contact stack: WhatsApp + Call. Auto-hides when the cart drawer
+// or checkout dialog is open so it doesn't overlap critical CTAs.
 const FloatingActions = () => {
+  const { isOpen: cartOpen } = useCart();
   const [phone, setPhone] = useState(null);
   const [tipDismissed, setTipDismissed] = useState(false);
   const [showTip, setShowTip] = useState(false);
@@ -33,7 +36,7 @@ const FloatingActions = () => {
     return () => { cancelled = true; };
   }, []);
 
-  if (!phone) return null;
+  if (!phone || cartOpen) return null;
 
   const waMsg = 'Hi! I want to place an order from ChickenCrew.';
   const waHref = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;

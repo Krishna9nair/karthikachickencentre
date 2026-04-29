@@ -1,0 +1,223 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, MessageCircle, Download, Printer, Copy, Check } from 'lucide-react';
+import { formatQty, calcSubtotal, UNIT_SHORT, normalizeUnit } from '../lib/units';
+
+// Single source of truth for the admin/shop WhatsApp number that
+// receives every new order notification.
+const ADMIN_WHATSAPP = '919619417452';
+
+// Build a richly-formatted WhatsApp message with order details.
+// Uses WhatsApp's *bold*, _italic_ markdown so it renders nicely in chat.
+const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod }) => {
+  const orderId = order?.id ? order.id.slice(0, 8).toUpperCase() : '—';
+  const lines = items
+    .map(
+      (i) =>
+        `• ${i.name} — ${formatQty(i.qty, i.unit)} × ₹${i.price}/${UNIT_SHORT[normalizeUnit(i.unit)]} = ₹${calcSubtotal(i.price, i.qty)}`
+    )
+    .join('\n');
+  const payLabel =
+    paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online (UPI / Card)';
+  return `🐔 *NEW ORDER — ChickenCrew*
+
+*Order ID:* ${orderId}
+*Date:* ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+
+*Customer:* ${customer.name}
+*Phone:* ${customer.phone}
+*Address:* ${customer.address}
+
+*Items:*
+${lines}
+
+*Total: ₹${subtotal.toFixed(0)}*
+*Payment:* ${payLabel}
+
+— sent from karthikachickencentre.shop`;
+};
+
+const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
+  const billRef = useRef(null);
+  const [copied, setCopied] = useState(false);
+  const [notified, setNotified] = useState(false);
+
+  const orderId = order?.id ? order.id.slice(0, 8).toUpperCase() : null;
+  const date = new Date().toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const adminMsg = buildAdminMessage({
+    order,
+    items,
+    subtotal,
+    customer,
+    paymentMethod,
+  });
+  const waAdminLink = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(adminMsg)}`;
+
+  // Auto-open WhatsApp once on first render so the customer just taps Send.
+  // Some browsers (esp. iOS) block this without a user gesture; in that case
+  // the visible "Notify Shop" button takes over.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        window.open(waAdminLink, '_blank', 'noopener,noreferrer');
+      } catch (_) {}
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handlePrint = () => {
+    if (typeof window !== 'undefined' && billRef.current) {
+      window.print();
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(adminMsg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (_) {}
+  };
+
+  return (
+    <div className="p-5 md:p-7" data-testid="order-bill">
+      <div className="flex flex-col items-center text-center">
+        <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+          <CheckCircle2 className="w-9 h-9 text-emerald-600" />
+        </div>
+        <h4 className="mt-3 font-serif text-2xl text-[#2A1A14]">Order placed!</h4>
+        <p className="text-sm text-[#7B5A48] mt-1 max-w-xs">
+          Your bill is below. WhatsApp should open automatically — just tap Send so
+          the shop gets your order.
+        </p>
+      </div>
+
+      {/* Bill / receipt — printable */}
+      <div
+        ref={billRef}
+        className="mt-5 rounded-xl border-2 border-dashed border-[#C47B4A] bg-white p-5 text-[#2A1A14] print:border-black print:border print:p-3"
+        data-testid="bill-receipt"
+      >
+        <div className="text-center pb-3 border-b border-[#EADFCF]">
+          <div className="font-serif text-xl font-bold">Karthika Chicken Centre</div>
+          <div className="text-[10px] tracking-[0.2em] text-[#7B5A48] mt-0.5">
+            FARM FRESH DAILY
+          </div>
+          <div className="text-[10px] text-[#7B5A48] mt-1">
+            Trimurti Nagar, Dombivli East · +91 9619417452
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs mt-3">
+          <div>
+            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Order ID</div>
+            <div className="font-mono font-semibold" data-testid="bill-order-id">
+              {orderId || '—'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Date</div>
+            <div>{date}</div>
+          </div>
+          <div className="col-span-2">
+            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Customer</div>
+            <div className="font-medium">{customer.name}</div>
+            <div className="text-[#7B5A48]">{customer.phone}</div>
+            <div className="text-[#7B5A48] text-[11px]">{customer.address}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-dashed border-[#EADFCF] pt-3">
+          <table className="w-full text-xs" data-testid="bill-items-table">
+            <thead className="text-[10px] uppercase tracking-wider text-[#7B5A48]">
+              <tr>
+                <th className="text-left pb-1">Item</th>
+                <th className="text-center pb-1">Qty</th>
+                <th className="text-right pb-1">Rate</th>
+                <th className="text-right pb-1">Amt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((i) => (
+                <tr key={i.id} className="border-t border-[#F3EADB]">
+                  <td className="py-1.5 align-top">{i.name}</td>
+                  <td className="py-1.5 text-center">{formatQty(i.qty, i.unit)}</td>
+                  <td className="py-1.5 text-right">
+                    ₹{i.price}
+                    <div className="text-[9px] text-[#7B5A48]">/{UNIT_SHORT[normalizeUnit(i.unit)]}</div>
+                  </td>
+                  <td className="py-1.5 text-right font-semibold">
+                    ₹{calcSubtotal(i.price, i.qty)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-3 pt-3 border-t-2 border-[#C47B4A] flex items-center justify-between">
+          <div>
+            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Payment</div>
+            <div className="text-xs font-medium">
+              {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Total</div>
+            <div className="font-serif text-2xl font-bold text-[#B93826]" data-testid="bill-total">
+              ₹{subtotal.toFixed(0)}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 text-center text-[10px] text-[#7B5A48] italic">
+          Thank you — your order will be ready before you reach the shop.
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="mt-5 grid grid-cols-2 gap-2 print:hidden">
+        <a
+          href={waAdminLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setNotified(true)}
+          data-testid="bill-notify-shop-btn"
+          className="col-span-2 inline-flex items-center justify-center gap-2 py-3 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-semibold shadow-md transition-colors"
+        >
+          <MessageCircle className="w-4 h-4 fill-white" />
+          {notified ? 'Re-send to shop on WhatsApp' : 'Notify shop on WhatsApp'}
+        </a>
+        <button
+          onClick={handlePrint}
+          data-testid="bill-print-btn"
+          className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+        >
+          <Printer className="w-4 h-4" /> Print
+        </button>
+        <button
+          onClick={handleCopy}
+          data-testid="bill-copy-btn"
+          className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+          {copied ? 'Copied!' : 'Copy bill'}
+        </button>
+      </div>
+
+      <button
+        onClick={onDone}
+        data-testid="bill-done-btn"
+        className="mt-3 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium print:hidden"
+      >
+        Done
+      </button>
+    </div>
+  );
+};
+
+export default Bill;
