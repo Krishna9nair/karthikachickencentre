@@ -65,17 +65,23 @@ const Hero = () => {
           <div className="absolute -inset-6 bg-gradient-to-br from-[#F5D4C0]/40 via-[#FAF4EC] to-[#FAF4EC] rounded-3xl blur-2xl" />
           <div className="relative rounded-2xl bg-[#FFF8EE] border-2 border-[#C47B4A] shadow-lg overflow-hidden">
             <div className="m-2 md:m-3 border-[1.5px] border-[#C47B4A] rounded-xl p-3 md:p-4 relative">
+              {/*
+                LCP element. Locally hosted WebP at 3 widths.
+                Reserved aspect ratio (3/4 portrait) prevents CLS.
+                Preload hint lives in index.html.
+              */}
               <img
-                src="https://karthikachickencentre.shop/assets/hero-rooster-d4bxhC-A.jpg"
+                src="/hero-rooster-480.webp"
+                srcSet="/hero-rooster-320.webp 320w, /hero-rooster-480.webp 480w, /hero-rooster-800.webp 800w"
+                sizes="(max-width: 768px) 90vw, 40vw"
                 alt="Fresh farm rooster illustration"
+                width="800"
+                height="1067"
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
+                fetchpriority="high"
                 className="w-full h-auto object-contain max-h-[260px] sm:max-h-[320px] md:max-h-none"
-                onError={(e) => {
-                  e.target.src =
-                    'https://images.pexels.com/photos/27202653/pexels-photo-27202653.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=700';
-                }}
+                style={{ aspectRatio: '3 / 4' }}
               />
             </div>
           </div>

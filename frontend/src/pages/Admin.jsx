@@ -62,7 +62,9 @@ const Admin = () => {
   const saveShop = async () => {
     if (!shopDraft?.id) return;
     setSavingShop(true);
-    const { error } = await supabase
+    // Race the update against an 8-second timeout so the spinner can never
+    // hang forever (e.g., flaky network, RLS rejection without error event).
+    const updatePromise = supabase
       .from('shop_settings')
       .update({
         shop_name: shopDraft.shop_name,
@@ -72,12 +74,33 @@ const Admin = () => {
         upi_id: shopDraft.upi_id,
         rider_passcode: shopDraft.rider_passcode,
       })
-      .eq('id', shopDraft.id);
-    setSavingShop(false);
-    if (error) toast({ title: 'Save failed', description: error.message });
-    else {
-      toast({ title: 'Shop settings updated' });
-      setShop(shopDraft);
+      .eq('id', shopDraft.id)
+      .select('id')
+      .maybeSingle();
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Save timed out — check your network and try again.')), 8000)
+    );
+
+    try {
+      const { error, data } = await Promise.race([updatePromise, timeout]);
+      if (error) throw error;
+      if (!data) {
+        toast({
+          title: 'Save blocked',
+          description:
+            'No row updated. Make sure you are signed in as admin and the row exists.',
+        });
+      } else {
+        toast({ title: 'Shop settings updated' });
+        setShop(shopDraft);
+        // Bust the public localStorage cache so customers see new info quickly
+        try { localStorage.removeItem('cc_shop_v1'); } catch (_) {}
+      }
+    } catch (err) {
+      toast({ title: 'Save failed', description: err.message || String(err) });
+    } finally {
+      setSavingShop(false);
     }
   };
 

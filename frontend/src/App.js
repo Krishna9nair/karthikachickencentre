@@ -7,16 +7,18 @@ import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { I18nProvider } from './lib/i18n';
 import Home from './pages/Home';
-import InstallPrompt from './components/InstallPrompt';
-import OfflineGate from './components/OfflineGate';
-import FloatingActions from './components/FloatingActions';
 import { Toaster } from './components/ui/toaster';
 
 // Code-split the admin / rider / auth pages — only loaded on demand.
-// Cuts initial JS bundle by ~40% for the 95% of users who never hit those routes.
 const Admin = lazy(() => import('./pages/Admin'));
 const Rider = lazy(() => import('./pages/Rider'));
 const Auth = lazy(() => import('./pages/Auth'));
+
+// Code-split non-critical UI (floating buttons, offline gate, install prompt)
+// so they don't delay the LCP / TTI on the home page.
+const FloatingActions = lazy(() => import('./components/FloatingActions'));
+const OfflineGate = lazy(() => import('./components/OfflineGate'));
+const InstallPrompt = lazy(() => import('./components/InstallPrompt'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-[#FAF4EC] flex items-center justify-center">
@@ -93,9 +95,11 @@ function App() {
                 {/* Catch-all: any unknown path goes home */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-              <InstallPrompt />
-              <OfflineGate />
-              <FloatingActions />
+              <Suspense fallback={null}>
+                <InstallPrompt />
+                <OfflineGate />
+                <FloatingActions />
+              </Suspense>
               <Toaster />
             </BrowserRouter>
           </CartProvider>

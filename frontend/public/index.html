@@ -57,10 +57,48 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="preconnect" href="https://ksgvwlmmsplamtfkuavb.supabase.co" crossorigin />
         <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+
+        <!-- Preload the LCP hero image (mobile size) so it starts downloading
+             in parallel with the JS bundle. Saves ~600-1200ms on slow 4G. -->
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,600;1,9..144,700&display=swap"
-          rel="stylesheet"
+          rel="preload"
+          as="image"
+          href="/hero-rooster-480.webp"
+          imagesrcset="/hero-rooster-320.webp 320w, /hero-rooster-480.webp 480w, /hero-rooster-800.webp 800w"
+          imagesizes="(max-width: 768px) 90vw, 40vw"
+          fetchpriority="high"
         />
+
+        <!-- Slim Google Fonts payload: only the weights we actually use.
+             font-display=swap so text shows immediately while font loads. -->
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:wght@600;700;800;900&display=swap"
+          rel="stylesheet"
+          media="print"
+          onload="this.media='all'"
+        />
+        <noscript>
+          <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:wght@600;700;800;900&display=swap"
+            rel="stylesheet"
+          />
+        </noscript>
+
+        <!-- Critical above-the-fold CSS inlined to eliminate render-blocking -->
+        <style>
+          html,body{margin:0;padding:0;background:#FAF4EC;color:#2A1A14;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+          body{min-height:100vh}
+          .App{min-height:100vh}
+          /* skeleton for hero before React mounts so users see something at FCP */
+          .pre-shell{display:flex;flex-direction:column;align-items:center;padding:40px 20px;gap:16px}
+          .pre-shell .pill{height:24px;width:160px;border-radius:999px;background:#F4E4D1}
+          .pre-shell .h{height:48px;width:80%;max-width:560px;border-radius:8px;background:#EADFCF}
+          .pre-shell .h2{height:32px;width:60%;max-width:380px;border-radius:8px;background:#EADFCF;opacity:.7}
+          @media(prefers-reduced-motion:no-preference){
+            .pre-shell .pill,.pre-shell .h,.pre-shell .h2{animation:p 1.4s ease-in-out infinite alternate}
+            @keyframes p{from{opacity:.55}to{opacity:.9}}
+          }
+        </style>
 
         <!-- Local-business structured data (Google rich results) -->
         <script type="application/ld+json">
@@ -101,7 +139,16 @@
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
-        <div id="root"></div>
+        <div id="root">
+          <!-- Static shell shown at FCP (before React boots). Replaced
+               on hydration. Keeps the page from looking blank during
+               the JS download on slow networks. -->
+          <div class="pre-shell">
+            <div class="pill"></div>
+            <div class="h"></div>
+            <div class="h2"></div>
+          </div>
+        </div>
         <script>
           // Register service worker for PWA
           if ('serviceWorker' in navigator) {
