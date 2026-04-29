@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { X, Star, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Star, Loader2, CheckCircle2, Share2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../hooks/use-toast';
+
+const SHOP_URL = 'https://karthikachickencentre.shop';
 
 /**
  * Customer review submission dialog.
@@ -90,6 +92,30 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
             <p className="mt-1 text-sm text-[#7B5A48] max-w-xs">
               Your review will appear on the site once the shop owner approves it. Thanks for the feedback!
             </p>
+
+            {rating >= 4 && (
+              <div className="mt-5 w-full rounded-xl bg-[#FFF7DA] border border-[#F0DC8A] p-4">
+                <div className="text-sm font-semibold text-[#2A1A14]">
+                  Loved your chicken? Tell a neighbour 🐔
+                </div>
+                <p className="text-xs text-[#7B5A48] mt-1">
+                  One quick share helps a small local shop more than any ad ever could.
+                </p>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `Hey! Just got fresh chicken from ChickenCrew and it was genuinely great. ${rating}/5 ⭐ — try it out: ${SHOP_URL}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="review-share-btn"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-semibold shadow-sm"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share with neighbours on WhatsApp
+                </a>
+              </div>
+            )}
+
             <button
               onClick={handleDone}
               data-testid="review-done-btn"
