@@ -70,10 +70,88 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
   }, []);
 
   const handlePrint = () => {
-    if (typeof window !== 'undefined' && billRef.current) {
+    if (typeof window === 'undefined') return;
+    const itemsHtml = items
+      .map(
+        (i) => `
+        <tr>
+          <td>${escapeHtml(i.name)}</td>
+          <td style="text-align:center">${escapeHtml(formatQty(i.qty, i.unit))}</td>
+          <td style="text-align:right">₹${i.price}<br/><span class="rate">/${UNIT_SHORT[normalizeUnit(i.unit)]}</span></td>
+          <td style="text-align:right;font-weight:600">₹${calcSubtotal(i.price, i.qty)}</td>
+        </tr>`
+      )
+      .join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Bill — Karthika Chicken Centre</title>
+      <style>
+        body{font-family:'Segoe UI',-apple-system,Inter,Helvetica,Arial,sans-serif;color:#2A1A14;margin:0;padding:24px;background:#fff}
+        .receipt{max-width:380px;margin:0 auto;border:2px dashed #C47B4A;padding:18px;border-radius:12px}
+        h1{font-family:Georgia,serif;font-size:22px;margin:0;text-align:center}
+        .sub{text-align:center;font-size:10px;letter-spacing:.2em;color:#7B5A48;margin-top:2px}
+        .addr{text-align:center;font-size:10px;color:#7B5A48;margin-top:4px;padding-bottom:10px;border-bottom:1px solid #EADFCF}
+        .row{display:flex;justify-content:space-between;font-size:11px;margin-top:10px;gap:8px}
+        .row .label{color:#7B5A48;text-transform:uppercase;letter-spacing:.08em;font-size:9px}
+        .cust{margin-top:8px;font-size:11px}
+        .cust .name{font-weight:600}
+        .cust .meta{color:#7B5A48;font-size:10px}
+        table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px;border-top:1px dashed #EADFCF;padding-top:8px}
+        th{font-size:9px;text-transform:uppercase;color:#7B5A48;letter-spacing:.05em;text-align:left;padding-bottom:4px}
+        th:nth-child(2){text-align:center}th:nth-child(3),th:nth-child(4){text-align:right}
+        td{padding:6px 0;border-top:1px solid #F3EADB;vertical-align:top}
+        td .rate{font-size:9px;color:#7B5A48}
+        .total{margin-top:12px;padding-top:12px;border-top:2px solid #C47B4A;display:flex;justify-content:space-between;align-items:flex-end}
+        .total .pay{font-size:11px}
+        .total .pay .label{font-size:9px;color:#7B5A48;text-transform:uppercase}
+        .total .amount{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#B93826}
+        .thanks{margin-top:10px;text-align:center;font-size:10px;color:#7B5A48;font-style:italic}
+        @media print{body{padding:0}}
+      </style></head>
+      <body>
+        <div class="receipt">
+          <h1>Karthika Chicken Centre</h1>
+          <div class="sub">FARM FRESH DAILY</div>
+          <div class="addr">Trimurti Nagar, Dombivli East · +91 9619417452</div>
+          <div class="row">
+            <div><div class="label">Order ID</div><div style="font-family:monospace;font-weight:600">${escapeHtml(orderId || '—')}</div></div>
+            <div style="text-align:right"><div class="label">Date</div><div>${escapeHtml(date)}</div></div>
+          </div>
+          <div class="cust">
+            <div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Customer</div>
+            <div class="name">${escapeHtml(customer.name)}</div>
+            <div class="meta">${escapeHtml(customer.phone)}</div>
+            <div class="meta">${escapeHtml(customer.address)}</div>
+          </div>
+          <table>
+            <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <div class="total">
+            <div class="pay"><div class="label">Payment</div><div>${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}</div></div>
+            <div><div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em;text-align:right">Total</div><div class="amount">₹${subtotal.toFixed(0)}</div></div>
+          </div>
+          <div class="thanks">Thank you — your order will be ready before you reach the shop.</div>
+        </div>
+        <script>window.addEventListener('load',function(){setTimeout(function(){window.print()},250)});</script>
+      </body></html>`;
+
+    const w = window.open('', '_blank', 'width=420,height=700');
+    if (!w) {
+      // Pop-up blocked — fall back to native print of the current page
       window.print();
+      return;
     }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   };
+
+  // Tiny HTML escaper for the print template (not security critical here, but
+  // keeps weird characters from breaking the layout).
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
 
   const handleCopy = async () => {
     try {

@@ -11,6 +11,9 @@ import hashlib
 import jwt
 import time
 import uuid
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict
@@ -26,6 +29,15 @@ RAZORPAY_KEY_ID = os.environ['RAZORPAY_KEY_ID']
 RAZORPAY_KEY_SECRET = os.environ['RAZORPAY_KEY_SECRET']
 JWT_SECRET = os.environ['JWT_SECRET']
 
+# Optional: CallMeBot WhatsApp API. If both env vars are set, the backend
+# fires a WhatsApp message to the admin phone whenever an order is placed.
+# Setup (one-time, ~2 min):
+#   1. Admin sends "I allow callmebot to send me messages" to +34 644 51 95 23
+#   2. Bot replies with an APIKEY
+#   3. Set CALLMEBOT_APIKEY + CALLMEBOT_PHONE in backend/.env
+ADMIN_WA_PHONE = os.environ.get('CALLMEBOT_PHONE', '919619417452')
+CALLMEBOT_APIKEY = os.environ.get('CALLMEBOT_APIKEY', '').strip()
+
 # Supabase service-role client (bypasses RLS) for privileged backend ops
 sb: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -34,6 +46,62 @@ rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 app = FastAPI(title="Fresh Cluck API")
 api_router = APIRouter(prefix="/api")
+
+
+# ----------------------- WhatsApp admin notifier -----------------------
+def _format_qty(qty: float, unit: str) -> str:
+    u = (unit or 'kg').lower()
+    if u in ('piece', 'pc', 'pcs'):
+        n = int(qty)
+        return f"{n} pc{'' if n == 1 else 's'}"
+    if u in ('dzn', 'dozen'):
+        return f"{int(round(qty * 12))} pcs"
+    if qty < 1:
+        return f"{int(qty * 1000)}g"
+    return f"{qty} kg"
+
+
+def _build_admin_msg(order: Dict[str, Any], paid: bool) -> str:
+    items = order.get('items') or []
+    lines = []
+    for i in items:
+        amt = round((i.get('price') or 0) * (i.get('qty') or 0))
+        lines.append(
+            f"• {i.get('name','?')} — {_format_qty(i.get('qty', 0), i.get('unit', 'kg'))}"
+            f" × ₹{i.get('price','?')} = ₹{amt}"
+        )
+    oid = (order.get('id') or '')[:8].upper()
+    return (
+        f"*NEW ORDER - ChickenCrew*\n\n"
+        f"*Order ID:* {oid}\n"
+        f"*Customer:* {order.get('customer_name','?')}\n"
+        f"*Phone:* {order.get('customer_phone','?')}\n"
+        f"*Address:* {order.get('customer_address','—') or '—'}\n\n"
+        f"*Items:*\n" + "\n".join(lines) + "\n\n"
+        f"*Total: Rs.{int(order.get('total_amount') or 0)}*\n"
+        f"*Payment:* {'Paid online' if paid else 'Cash on Delivery'}"
+    )
+
+
+def notify_admin_whatsapp(order: Dict[str, Any], paid: bool) -> None:
+    """Fire-and-forget admin WhatsApp via CallMeBot. Silently no-ops if not
+    configured. Errors are logged but never bubble up to the order response."""
+    if not CALLMEBOT_APIKEY:
+        return
+    try:
+        msg = _build_admin_msg(order, paid)
+        params = urllib.parse.urlencode({
+            'phone': ADMIN_WA_PHONE,
+            'text': msg,
+            'apikey': CALLMEBOT_APIKEY,
+        })
+        url = f"https://api.callmebot.com/whatsapp.php?{params}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'ChickenCrew/1.0'})
+        with urllib.request.urlopen(req, timeout=6) as resp:  # noqa: S310
+            _ = resp.read(256)
+        logging.info("admin whatsapp sent for order %s", order.get('id'))
+    except Exception as e:
+        logging.warning("admin whatsapp failed: %s", e)
 
 # ----------------------- Models -----------------------
 class CartItem(BaseModel):
@@ -240,6 +308,9 @@ async def verify_payment(body: VerifyPaymentIn):
         order_row = res.data[0] if res.data else None
         # Clean up draft
         ORDER_DRAFTS.pop(body.local_order_id, None)
+        # Fire-and-forget WhatsApp notification to the shop admin
+        if order_row:
+            notify_admin_whatsapp(order_row, paid=True)
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("order insert failed")
@@ -266,6 +337,9 @@ async def create_cod_order(payload: CreateOrderIn):
         }
         res = sb.table("orders").insert(insert_payload).execute()
         order_row = res.data[0] if res.data else None
+        # Fire-and-forget WhatsApp notification to the shop admin
+        if order_row:
+            notify_admin_whatsapp(order_row, paid=False)
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("cod order failed")
