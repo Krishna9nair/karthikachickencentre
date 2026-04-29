@@ -4,6 +4,7 @@ import { ShoppingCart, Languages, Download } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../lib/i18n';
+import useIsInstalledApp from '../lib/useIsInstalledApp';
 import InstallAppDialog from './InstallAppDialog';
 
 const Navbar = () => {
@@ -13,6 +14,8 @@ const Navbar = () => {
   const { lang, setLang, t } = useI18n();
   const { pathname, hash } = useLocation();
   const [installOpen, setInstallOpen] = useState(false);
+  // Hide the "Get App" CTA when already running as an installed PWA / native APK.
+  const installed = useIsInstalledApp();
 
   const NAV = [
     { label: t('nav.home'), to: '/' },
@@ -69,15 +72,17 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Get App button */}
-          <button
-            onClick={() => setInstallOpen(true)}
-            data-testid="navbar-get-app-btn"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EADFCF] bg-white text-[#3B2416] text-sm hover:border-[#B93826]/40 hover:text-[#B93826] transition-colors"
-          >
-            <Download className="w-4 h-4 text-[#B93826]" />
-            <span className="font-medium">{t('nav.get_app')}</span>
-          </button>
+          {/* Get App button — hidden once the app is installed */}
+          {!installed && (
+            <button
+              onClick={() => setInstallOpen(true)}
+              data-testid="navbar-get-app-btn"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EADFCF] bg-white text-[#3B2416] text-sm hover:border-[#B93826]/40 hover:text-[#B93826] transition-colors"
+            >
+              <Download className="w-4 h-4 text-[#B93826]" />
+              <span className="font-medium">{t('nav.get_app')}</span>
+            </button>
+          )}
 
           {/* Language toggle (works) */}
           <button
@@ -110,14 +115,16 @@ const Navbar = () => {
       {/* Mobile horizontal nav bar */}
       <nav className="md:hidden border-t border-[#EADFCF] bg-[#FAF4EC]">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-4 py-2">
-          {/* Get App pill (mobile prominence) */}
-          <button
-            onClick={() => setInstallOpen(true)}
-            data-testid="navbar-get-app-btn-mobile"
-            className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-[#B93826]/10 text-[#B93826] border border-[#B93826]/30"
-          >
-            <Download className="w-3.5 h-3.5" /> {t('nav.get_app')}
-          </button>
+          {/* Get App pill (mobile prominence) — hidden when already installed */}
+          {!installed && (
+            <button
+              onClick={() => setInstallOpen(true)}
+              data-testid="navbar-get-app-btn-mobile"
+              className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-[#B93826]/10 text-[#B93826] border border-[#B93826]/30"
+            >
+              <Download className="w-3.5 h-3.5" /> {t('nav.get_app')}
+            </button>
+          )}
           {NAV.map((n) => (
             <Link
               key={n.to + n.label}
