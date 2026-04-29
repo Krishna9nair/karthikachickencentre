@@ -4,7 +4,7 @@ export const SHOP_INFO = {
   name: 'ChickenCrew',
   tagline: 'FARM FRESH DAILY',
   address: 'Kartika Chicken Center, Trimurti Nagar, Dombivli East, Thane, Maharashtra 421201',
-  phone: '8928370724',
+  phone: '9619417452',
   hoursWeekday: 'Mon \u2013 Sat: 7:00 AM \u2013 9:00 PM',
   hoursSunday: 'Sunday: 7:00 AM \u2013 9:00 PM',
   about:

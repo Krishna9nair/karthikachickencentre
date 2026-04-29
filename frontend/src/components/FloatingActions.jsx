@@ -3,7 +3,7 @@ import { MessageCircle, Phone, X } from 'lucide-react';
 import { api } from '../lib/api';
 
 // Hardcoded fallback so the buttons still appear even if the shop endpoint is unreachable.
-const FALLBACK_PHONE = '8928370724';
+const FALLBACK_PHONE = '9619417452';
 
 // Floating contact stack: WhatsApp + Call.
 const FloatingActions = () => {

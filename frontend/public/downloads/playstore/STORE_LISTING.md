@@ -81,7 +81,7 @@ quick pickup. Serving Dombivli East, Thane, and nearby areas.
 • Rider portal with passcode login & Google Maps navigation
 
 📞 CONTACT
-Call: 8928370724
+Call: 9619417452
 Visit: Kartika Chicken Center, Trimurti Nagar, Dombivli East,
        Thane, Maharashtra 421201
 
@@ -133,7 +133,7 @@ Declare the following data collected:
 | Field | Value |
 |---|---|
 | **Email** | `knair9843@gmail.com` |
-| **Phone** (optional) | `+91 8928370724` |
+| **Phone** (optional) | `+91 9619417452` |
 | **Website** | `https://karthikachickencentre.shop` |
 | **Privacy policy URL** | *(see below — you need to host PRIVACY_POLICY.md publicly)* |
 

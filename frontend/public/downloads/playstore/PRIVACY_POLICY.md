@@ -129,6 +129,6 @@ communicated in the app.
 If you have questions about this Privacy Policy, contact us:
 
 - **Email:** knair9843@gmail.com
-- **Phone:** +91 8928370724
+- **Phone:** +91 9619417452
 - **Address:** Kartika Chicken Center, Trimurti Nagar, Dombivli East,
   Thane, Maharashtra 421201, India

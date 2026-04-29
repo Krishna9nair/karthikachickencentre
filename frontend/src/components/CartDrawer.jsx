@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import CheckoutDialog from './CheckoutDialog';
 import { presetsFor, formatQty, calcSubtotal, normalizeUnit, UNIT_SHORT } from '../lib/units';
 
-const WHATSAPP_PHONE = '918928370724';
+const WHATSAPP_PHONE = '919619417452';
 
 const CartDrawer = () => {
   const { items, isOpen, setIsOpen, updateQty, removeItem, subtotal } = useCart();

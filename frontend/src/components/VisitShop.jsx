@@ -6,7 +6,7 @@ import { useT } from '../lib/i18n';
 const FALLBACK = {
   shop_name: 'Karthika Chicken Centre',
   address: 'Trimurti Nagar, Dombivli East, Thane, Maharashtra 421201',
-  contact_phone: '8928370724',
+  contact_phone: '9619417452',
 };
 
 const VisitShop = () => {

@@ -15,7 +15,7 @@ import QuantitySelector from './QuantitySelector';
 
 // Hardcoded best-seller list (by product name keyword)
 const BEST_SELLERS = ['Curry Cut', 'Country Chicken', 'Boneless'];
-const WHATSAPP_PHONE = '918928370724';
+const WHATSAPP_PHONE = '919619417452';
 
 const buildWaLink = (product, qty) => {
   const subtotal = calcSubtotal(product.price, qty);
