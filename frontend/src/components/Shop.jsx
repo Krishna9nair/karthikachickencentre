@@ -223,6 +223,13 @@ const Shop = () => {
           <p className="mt-3 text-[#7B5A48] max-w-xl mx-auto">
             {t('shop.subtitle')}
           </p>
+          <div
+            className="mt-5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] text-[#5C3A14] text-xs font-bold tracking-wide shadow-sm"
+            data-testid="first-order-promo-badge"
+          >
+            <Flame className="w-3.5 h-3.5 text-[#B93826]" />
+            FIRST ORDER? GET 10% OFF AT CHECKOUT
+          </div>
         </div>
 
         {status === 'loading' ? (

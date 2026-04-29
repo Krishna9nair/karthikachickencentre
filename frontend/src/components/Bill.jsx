@@ -37,7 +37,17 @@ ${lines}
 — sent from karthikachickencentre.shop`;
 };
 
-const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
+const Bill = ({
+  order,
+  items,
+  subtotal,
+  customer,
+  paymentMethod,
+  onDone,
+  grossSubtotal,
+  discount = 0,
+  firstOrderDiscountApplied = false,
+}) => {
   const billRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [notified, setNotified] = useState(false);
@@ -231,6 +241,15 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
             <div className="text-xs font-medium">
               {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}
             </div>
+            {firstOrderDiscountApplied && discount > 0 && (
+              <div
+                className="text-[10px] text-emerald-700 font-medium mt-1"
+                data-testid="bill-discount-line"
+              >
+                First-order 10% off: − ₹{Number(discount).toFixed(0)}
+                {grossSubtotal ? ` (was ₹${Number(grossSubtotal).toFixed(0)})` : ''}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Total</div>

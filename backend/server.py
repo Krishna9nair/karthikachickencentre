@@ -54,6 +54,7 @@ class CreateOrderIn(BaseModel):
     items: List[CartItem]
     total_amount: float
     notes: Optional[str] = ""
+    apply_first_order_discount: bool = False
 
 
 class VerifyPaymentIn(BaseModel):
@@ -102,6 +103,40 @@ def upsert_customer_profile(name: str, phone: str, address: Optional[str],
         }, on_conflict="phone").execute()
     except Exception as e:
         logging.warning("customer profile upsert failed: %s", e)
+
+
+# ----------------------- First-order discount -----------------------
+FIRST_ORDER_DISCOUNT_PCT = 10  # %
+
+
+def is_first_time_customer(phone: str) -> bool:
+    """Returns True if the phone has never placed a saved order before."""
+    if not phone or len(phone) < 10:
+        return False
+    try:
+        res = sb.table("customer_profiles").select("phone").eq(
+            "phone", phone
+        ).limit(1).execute()
+        return not bool(res.data)
+    except Exception as e:
+        logging.warning("first-time check failed for %s: %s", phone, e)
+        return False
+
+
+def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, str]:
+    """Server-side source of truth for the order total. Recomputes the items
+    sum and applies the first-order discount only if the phone is genuinely
+    first-time. Returns (final_total, discount_applied, notes_suffix)."""
+    items_sum = sum((i.price or 0) * (i.qty or 0) for i in payload.items)
+    discount_applied = False
+    note_suffix = ""
+    if payload.apply_first_order_discount and is_first_time_customer(
+        payload.customer_phone
+    ):
+        items_sum = round(items_sum * (1 - FIRST_ORDER_DISCOUNT_PCT / 100), 2)
+        discount_applied = True
+        note_suffix = f" [First-order {FIRST_ORDER_DISCOUNT_PCT}% off applied]"
+    return round(items_sum, 2), discount_applied, note_suffix
 
 
 # ----------------------- Auth Helpers -----------------------
@@ -198,6 +233,17 @@ async def get_products():
 
 
 # ----------------------- Customer profile (saved address) -----------------------
+@api_router.get("/public/first-order-eligible/{phone}")
+async def check_first_order_eligible(phone: str):
+    """Lightweight check for the checkout dialog — returns whether this phone
+    is eligible for the first-order discount."""
+    phone = (phone or "").strip()
+    if len(phone) < 10:
+        return {"eligible": False, "discount_pct": FIRST_ORDER_DISCOUNT_PCT}
+    eligible = is_first_time_customer(phone)
+    return {"eligible": eligible, "discount_pct": FIRST_ORDER_DISCOUNT_PCT}
+
+
 @api_router.get("/public/customer-profile/{phone}")
 async def get_customer_profile(phone: str):
     """Look up the most-recent saved name + address + location for a phone
@@ -262,10 +308,15 @@ async def create_review(body: ReviewIn):
 @api_router.post("/payments/create-order")
 async def create_payment_order(payload: CreateOrderIn):
     """Create a Razorpay order and remember the draft locally until verify."""
-    if payload.total_amount <= 0 or not payload.items:
+    if not payload.items:
+        raise HTTPException(400, "Empty cart")
+    # Server is the source of truth for total — re-compute from items, apply
+    # the first-order discount only if the customer is genuinely first-time.
+    final_total, discount_applied, note_suffix = resolve_order_total(payload)
+    if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
-        amount_paise = int(round(payload.total_amount * 100))
+        amount_paise = int(round(final_total * 100))
         receipt = f"fc_{uuid.uuid4().hex[:12]}"
         rzp_order = rzp_client.order.create({
             "amount": amount_paise,
@@ -274,9 +325,15 @@ async def create_payment_order(payload: CreateOrderIn):
             "payment_capture": 1,
         })
         local_id = str(uuid.uuid4())
+        # Persist the server-computed total + discount note onto the draft so
+        # /payments/verify uses the correct numbers when inserting the order.
+        draft = payload.dict()
+        draft["total_amount"] = final_total
+        draft["notes"] = (draft.get("notes") or "") + note_suffix
+        draft["_discount_applied"] = discount_applied
         ORDER_DRAFTS[local_id] = {
             "rzp_order_id": rzp_order["id"],
-            "draft": payload.dict(),
+            "draft": draft,
         }
         return {
             "local_order_id": local_id,
@@ -284,6 +341,8 @@ async def create_payment_order(payload: CreateOrderIn):
             "razorpay_key_id": RAZORPAY_KEY_ID,
             "amount": amount_paise,
             "currency": "INR",
+            "discount_applied": discount_applied,
+            "final_total": final_total,
         }
     except Exception as e:
         logging.exception("razorpay order failed")
@@ -347,7 +406,10 @@ async def verify_payment(body: VerifyPaymentIn):
 @api_router.post("/orders/cod")
 async def create_cod_order(payload: CreateOrderIn):
     """Cash-on-delivery: insert the order directly with payment_status='cod_pending'."""
-    if payload.total_amount <= 0 or not payload.items:
+    if not payload.items:
+        raise HTTPException(400, "Empty cart")
+    final_total, discount_applied, note_suffix = resolve_order_total(payload)
+    if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
         insert_payload = {
@@ -355,10 +417,10 @@ async def create_cod_order(payload: CreateOrderIn):
             "customer_phone": payload.customer_phone,
             "customer_address": payload.customer_address or None,
             "items": [i.dict() for i in payload.items],
-            "total_amount": payload.total_amount,
+            "total_amount": final_total,
             "payment_status": "cod_pending",
             "upi_txn_ref": None,
-            "notes": payload.notes or None,
+            "notes": (payload.notes or "") + note_suffix or None,
             "delivery_lat": payload.delivery_lat,
             "delivery_lng": payload.delivery_lng,
         }
@@ -370,7 +432,7 @@ async def create_cod_order(payload: CreateOrderIn):
             payload.customer_address,
             payload.delivery_lat, payload.delivery_lng,
         )
-        return {"ok": True, "order": order_row}
+        return {"ok": True, "order": order_row, "discount_applied": discount_applied}
     except Exception as e:
         logging.exception("cod order failed")
         raise HTTPException(500, f"Could not save order: {e}")

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2, Sparkles } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { useCart } from '../context/CartContext';
@@ -8,6 +8,7 @@ import { api, loadRazorpay } from '../lib/api';
 import Bill from './Bill';
 
 const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
+const FIRST_ORDER_DISCOUNT_PCT = 10;
 
 const CheckoutDialog = ({ open, onClose }) => {
   const { items, subtotal, clear, setIsOpen } = useCart();
@@ -19,9 +20,18 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('online'); // online | cod
   const [profileLookup, setProfileLookup] = useState('idle'); // idle | loading | found
+  const [firstOrderEligible, setFirstOrderEligible] = useState(false);
   // Snapshot the cart at order placement so the Bill is stable even after
   // the parent cart state is cleared (or items change).
   const [orderSnapshot, setOrderSnapshot] = useState(null);
+
+  // Final amounts shown in the summary. Discount only applies when the
+  // server has confirmed this phone has never placed an order before.
+  const discount = useMemo(
+    () => (firstOrderEligible ? +(subtotal * FIRST_ORDER_DISCOUNT_PCT / 100).toFixed(2) : 0),
+    [firstOrderEligible, subtotal]
+  );
+  const finalTotal = +(subtotal - discount).toFixed(2);
 
   // On open, hydrate the form from the most-recent localStorage profile so
   // returning customers don't have to retype anything.
@@ -47,7 +57,10 @@ const CheckoutDialog = ({ open, onClose }) => {
   // When the customer types a 10-digit phone, look up the saved server-side
   // profile (works across devices). localStorage already covers same-device.
   useEffect(() => {
-    if (form.phone.length !== 10) return;
+    if (form.phone.length !== 10) {
+      setFirstOrderEligible(false);
+      return;
+    }
     let cancelled = false;
     setProfileLookup('loading');
     api
@@ -73,6 +86,18 @@ const CheckoutDialog = ({ open, onClose }) => {
       .catch(() => {
         if (!cancelled) setProfileLookup('idle');
       });
+
+    // Parallel check: is this customer eligible for the 10% first-order discount?
+    api
+      .get(`/public/first-order-eligible/${form.phone}`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setFirstOrderEligible(!!data?.eligible);
+      })
+      .catch(() => {
+        if (!cancelled) setFirstOrderEligible(false);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -191,7 +216,8 @@ const CheckoutDialog = ({ open, onClose }) => {
         qty: i.qty,
         price: i.price,
       })),
-      total_amount: subtotal,
+      total_amount: finalTotal,
+      apply_first_order_discount: firstOrderEligible,
       notes: '',
     };
 
@@ -204,7 +230,10 @@ const CheckoutDialog = ({ open, onClose }) => {
         price: i.price,
         unit: i.unit || 'kg',
       })),
-      subtotal,
+      subtotal: finalTotal,
+      grossSubtotal: subtotal,
+      discount,
+      firstOrderDiscountApplied: firstOrderEligible,
       customer: { name: form.name, phone: form.phone, address: form.address },
     };
 
@@ -318,6 +347,7 @@ const CheckoutDialog = ({ open, onClose }) => {
     setOrderSnapshot(null);
     setPaymentMethod('online');
     setProfileLookup('idle');
+    setFirstOrderEligible(false);
     onClose();
     setIsOpen(false);
   };
@@ -434,6 +464,25 @@ const CheckoutDialog = ({ open, onClose }) => {
               )}
             </div>
 
+            {firstOrderEligible && (
+              <div
+                className="rounded-xl bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] p-4 flex items-start gap-3"
+                data-testid="first-order-discount-banner"
+              >
+                <div className="shrink-0 w-9 h-9 rounded-full bg-[#B93826] text-white flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-bold text-[#2A1A14]">
+                    🎉 First order — {FIRST_ORDER_DISCOUNT_PCT}% off applied!
+                  </div>
+                  <div className="text-xs text-[#7B5A48] mt-0.5">
+                    You're saving <b className="text-[#B93826]">₹{discount.toFixed(0)}</b> on this order. Welcome to ChickenCrew!
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="rounded-xl bg-[#F3EADB] p-4">
               <div className="text-xs text-[#7B5A48] mb-2">Order summary</div>
               <ul className="space-y-1 text-sm text-[#3B2416]">
@@ -444,9 +493,24 @@ const CheckoutDialog = ({ open, onClose }) => {
                   </li>
                 ))}
               </ul>
+              {firstOrderEligible && discount > 0 && (
+                <>
+                  <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between text-sm text-[#3B2416]">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toFixed(0)}</span>
+                  </div>
+                  <div
+                    className="flex justify-between text-sm text-emerald-700 font-medium"
+                    data-testid="first-order-discount-line"
+                  >
+                    <span>First-order discount ({FIRST_ORDER_DISCOUNT_PCT}%)</span>
+                    <span>− ₹{discount.toFixed(0)}</span>
+                  </div>
+                </>
+              )}
               <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between font-semibold text-[#2A1A14]">
                 <span>Total</span>
-                <span>₹{subtotal.toFixed(0)}</span>
+                <span data-testid="checkout-final-total">₹{finalTotal.toFixed(0)}</span>
               </div>
             </div>
 
@@ -492,11 +556,11 @@ const CheckoutDialog = ({ open, onClose }) => {
             >
               {paymentMethod === 'cod' ? (
                 <>
-                  <Banknote className="w-4 h-4" /> Place order · ₹{subtotal.toFixed(0)} COD
+                  <Banknote className="w-4 h-4" /> Place order · ₹{finalTotal.toFixed(0)} COD
                 </>
               ) : (
                 <>
-                  <Smartphone className="w-4 h-4" /> Pay ₹{subtotal.toFixed(0)} via Razorpay
+                  <Smartphone className="w-4 h-4" /> Pay ₹{finalTotal.toFixed(0)} via Razorpay
                 </>
               )}
             </button>
@@ -523,6 +587,9 @@ const CheckoutDialog = ({ open, onClose }) => {
             subtotal={orderSnapshot.subtotal}
             customer={orderSnapshot.customer}
             paymentMethod={paymentMethod}
+            grossSubtotal={orderSnapshot.grossSubtotal}
+            discount={orderSnapshot.discount}
+            firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
             onDone={handleDone}
           />
         )}
