@@ -113,6 +113,34 @@ const CheckoutDialog = ({ open, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.phone]);
 
+  // Re-validate the applied coupon when the cart subtotal or phone changes
+  // (e.g. customer edits cart after applying — keeps min-order check fresh).
+  useEffect(() => {
+    if (!coupon || !open) return;
+    let cancelled = false;
+    api
+      .post('/coupons/validate', {
+        code: coupon.code,
+        phone: form.phone || null,
+        items_total: subtotal,
+      })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data.valid) {
+          setCoupon({ code: coupon.code, discount: Number(data.discount) });
+          setCouponError('');
+        } else {
+          setCoupon(null);
+          setCouponError(data.error || 'Coupon no longer valid');
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, form.phone, open]);
+
   if (!open) return null;
 
   const applyCoupon = async () => {
@@ -150,33 +178,6 @@ const CheckoutDialog = ({ open, onClose }) => {
     setCouponError('');
   };
 
-  // Re-validate the applied coupon when the cart subtotal or phone changes
-  // (e.g. customer edits cart after applying — keeps min-order check fresh).
-  useEffect(() => {
-    if (!coupon || !open) return;
-    let cancelled = false;
-    api
-      .post('/coupons/validate', {
-        code: coupon.code,
-        phone: form.phone || null,
-        items_total: subtotal,
-      })
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data.valid) {
-          setCoupon({ code: coupon.code, discount: Number(data.discount) });
-          setCouponError('');
-        } else {
-          setCoupon(null);
-          setCouponError(data.error || 'Coupon no longer valid');
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, form.phone]);
 
   const captureLocation = async () => {
     // NATIVE (Capacitor) path — uses Android/iOS location API
