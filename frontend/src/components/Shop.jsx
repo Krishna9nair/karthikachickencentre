@@ -188,6 +188,13 @@ const Shop = () => {
   const isFirst = useRef(true);
   const load = ({ silent = false } = {}) => {
     if (!silent) setStatus('loading');
+    // Safety net — never let the Shop section sit on its skeleton forever.
+    let safetyTimer;
+    if (!silent) {
+      safetyTimer = setTimeout(() => {
+        setStatus((s) => (s === 'loading' ? 'error' : s));
+      }, 10000);
+    }
     fetchPublicProducts({
       onRevalidate: (fresh) => setProducts(fresh),
     })
@@ -195,7 +202,8 @@ const Shop = () => {
         setProducts(list);
         setStatus('ready');
       })
-      .catch(() => { if (!silent) setStatus('error'); });
+      .catch(() => { if (!silent) setStatus('error'); })
+      .finally(() => { if (safetyTimer) clearTimeout(safetyTimer); });
   };
   useEffect(() => { load(); }, []);
   useAutoRefresh(() => { if (!isFirst.current) load({ silent: true }); isFirst.current = false; }, 60000);

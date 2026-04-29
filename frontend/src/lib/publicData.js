@@ -26,17 +26,34 @@ const writeCache = (data) => {
 };
 
 async function fetchFresh() {
+  // Hard timeout so a hanging Supabase request never leaves the UI stuck on
+  // "Loading today's board…" forever (common on slow mobile networks).
+  const TIMEOUT_MS = 8000;
+  const withTimeout = (promise, label) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out`)), TIMEOUT_MS)
+      ),
+    ]);
+
   const [{ data: products, error: pErr }, { data: prices, error: prErr }] = await Promise.all([
-    supabase
-      .from('products')
-      .select('id, name, description, image_url, unit, sort_order, is_active')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true }),
-    supabase
-      .from('daily_prices')
-      .select('product_id, price_per_unit, price_date')
-      .order('price_date', { ascending: false })
-      .limit(500),
+    withTimeout(
+      supabase
+        .from('products')
+        .select('id, name, description, image_url, unit, sort_order, is_active')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      'products'
+    ),
+    withTimeout(
+      supabase
+        .from('daily_prices')
+        .select('product_id, price_per_unit, price_date')
+        .order('price_date', { ascending: false })
+        .limit(500),
+      'daily_prices'
+    ),
   ]);
 
   if (pErr) throw pErr;
@@ -61,16 +78,26 @@ async function fetchFresh() {
 }
 
 // Returns cached data immediately if fresh; if stale, returns cached + triggers
-// a background revalidation via the optional onRevalidate callback.
+// a background revalidation via the optional onRevalidate callback. If no
+// cache exists and the network call fails/times out, the error bubbles up so
+// the UI can show a retry button.
 export async function fetchPublicProducts({ onRevalidate } = {}) {
   const cached = readCache();
   if (cached && !cached.stale) return cached.data;
 
-  if (cached && cached.stale && onRevalidate) {
-    fetchFresh().then(onRevalidate).catch(() => {});
+  if (cached && cached.stale) {
+    // Stale cache exists — try to refresh in background, but never block the
+    // UI on it. If the refresh fails (slow network, Supabase down), we keep
+    // showing stale prices instead of an empty board.
+    fetchFresh()
+      .then((fresh) => {
+        if (onRevalidate) onRevalidate(fresh);
+      })
+      .catch(() => {});
     return cached.data;
   }
 
+  // No cache at all — must fetch fresh. If this fails the caller handles it.
   return fetchFresh();
 }
 

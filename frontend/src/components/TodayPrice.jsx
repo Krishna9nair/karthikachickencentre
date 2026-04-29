@@ -42,6 +42,13 @@ const TodayPrice = () => {
   const load = async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
     else setStatus('loading');
+    // UI safety net: if the data layer hangs longer than 10s for any reason,
+    // flip to the error state so the customer can tap Retry instead of being
+    // stuck on a perpetual loading screen.
+    let safetyTimer;
+    if (!silent) {
+      safetyTimer = setTimeout(() => setStatus('error'), 10000);
+    }
     try {
       const list = await fetchPublicProducts();
       setProducts(list);
@@ -50,6 +57,7 @@ const TodayPrice = () => {
     } catch (_) {
       if (!silent) setStatus('error');
     } finally {
+      if (safetyTimer) clearTimeout(safetyTimer);
       if (silent) setRefreshing(false);
     }
   };
