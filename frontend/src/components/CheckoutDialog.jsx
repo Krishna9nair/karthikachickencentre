@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
 import Bill from './Bill';
+
+const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
 
 const CheckoutDialog = ({ open, onClose }) => {
   const { items, subtotal, clear, setIsOpen } = useCart();
@@ -16,9 +18,66 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [geoStatus, setGeoStatus] = useState('idle'); // idle | loading | ok | error
   const [orderDetails, setOrderDetails] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('online'); // online | cod
+  const [profileLookup, setProfileLookup] = useState('idle'); // idle | loading | found
   // Snapshot the cart at order placement so the Bill is stable even after
   // the parent cart state is cleared (or items change).
   const [orderSnapshot, setOrderSnapshot] = useState(null);
+
+  // On open, hydrate the form from the most-recent localStorage profile so
+  // returning customers don't have to retype anything.
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const raw = localStorage.getItem(LS_LAST_CUSTOMER);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved) return;
+      setForm((f) => ({
+        name: f.name || saved.name || '',
+        phone: f.phone || saved.phone || '',
+        address: f.address || saved.address || '',
+      }));
+      if (saved.lat && saved.lng) {
+        setLocation({ lat: Number(saved.lat), lng: Number(saved.lng) });
+        setGeoStatus('ok');
+      }
+    } catch (_) {}
+  }, [open]);
+
+  // When the customer types a 10-digit phone, look up the saved server-side
+  // profile (works across devices). localStorage already covers same-device.
+  useEffect(() => {
+    if (form.phone.length !== 10) return;
+    let cancelled = false;
+    setProfileLookup('loading');
+    api
+      .get(`/public/customer-profile/${form.phone}`)
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        // Only auto-fill empty fields; never clobber what the user already typed.
+        setForm((f) => ({
+          name: f.name || data.name || '',
+          phone: f.phone,
+          address: f.address || data.address || '',
+        }));
+        if (!location && data.lat && data.lng) {
+          setLocation({ lat: Number(data.lat), lng: Number(data.lng) });
+          setGeoStatus('ok');
+        }
+        setProfileLookup('found');
+        toast({
+          title: 'Welcome back!',
+          description: 'We pre-filled your saved address. Edit if anything changed.',
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setProfileLookup('idle');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.phone]);
 
   if (!open) return null;
 
@@ -149,6 +208,21 @@ const CheckoutDialog = ({ open, onClose }) => {
       customer: { name: form.name, phone: form.phone, address: form.address },
     };
 
+    // Persist the customer details locally so next checkout pre-fills instantly.
+    try {
+      localStorage.setItem(
+        LS_LAST_CUSTOMER,
+        JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          address: form.address,
+          lat: location?.lat || null,
+          lng: location?.lng || null,
+          updated_at: new Date().toISOString(),
+        })
+      );
+    } catch (_) {}
+
     // Cash on delivery path — no Razorpay
     if (paymentMethod === 'cod') {
       try {
@@ -243,6 +317,7 @@ const CheckoutDialog = ({ open, onClose }) => {
     setOrderDetails(null);
     setOrderSnapshot(null);
     setPaymentMethod('online');
+    setProfileLookup('idle');
     onClose();
     setIsOpen(false);
   };
@@ -285,13 +360,29 @@ const CheckoutDialog = ({ open, onClose }) => {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#7B5A48]">Delivery Address</label>
+              <label className="text-xs font-medium text-[#7B5A48] flex items-center gap-2">
+                Delivery Address
+                {profileLookup === 'loading' && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-[#7B5A48]">
+                    <Loader2 className="w-3 h-3 animate-spin" /> looking up…
+                  </span>
+                )}
+                {profileLookup === 'found' && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"
+                    data-testid="saved-address-badge"
+                  >
+                    <CheckCircle2 className="w-3 h-3" /> Saved address loaded
+                  </span>
+                )}
+              </label>
               <textarea
                 rows={2}
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                 className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm resize-none"
                 placeholder="House/Flat, Street, Landmark"
+                data-testid="checkout-address-input"
               />
             </div>
 

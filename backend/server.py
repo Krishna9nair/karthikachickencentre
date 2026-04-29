@@ -67,12 +67,41 @@ class RiderLoginIn(BaseModel):
     passcode: str
 
 
+class ReviewIn(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    rating: int  # 1..5
+    comment: str
+    order_id: Optional[str] = None
+
+
 class OrderStatusIn(BaseModel):
     payment_status: str  # 'paid', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'
 
 
 # Simple in-memory order draft store (order_id -> draft)
 ORDER_DRAFTS: Dict[str, dict] = {}
+
+
+# ----------------------- Helpers -----------------------
+def upsert_customer_profile(name: str, phone: str, address: Optional[str],
+                            lat: Optional[float], lng: Optional[float]) -> None:
+    """Best-effort upsert of customer profile keyed by phone. Failures are
+    logged but never bubble up — saving an order should never fail because
+    of a profile-cache write."""
+    if not phone or len(phone) < 10:
+        return
+    try:
+        sb.table("customer_profiles").upsert({
+            "phone": phone,
+            "name": name,
+            "address": address or None,
+            "lat": lat,
+            "lng": lng,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }, on_conflict="phone").execute()
+    except Exception as e:
+        logging.warning("customer profile upsert failed: %s", e)
 
 
 # ----------------------- Auth Helpers -----------------------
@@ -168,6 +197,67 @@ async def get_products():
         raise HTTPException(500, f"Failed to fetch products: {e}")
 
 
+# ----------------------- Customer profile (saved address) -----------------------
+@api_router.get("/public/customer-profile/{phone}")
+async def get_customer_profile(phone: str):
+    """Look up the most-recent saved name + address + location for a phone
+    number. Returns 404 if no profile exists yet."""
+    phone = (phone or "").strip()
+    if len(phone) < 10:
+        raise HTTPException(400, "Invalid phone")
+    try:
+        res = sb.table("customer_profiles").select(
+            "phone, name, address, lat, lng, updated_at"
+        ).eq("phone", phone).limit(1).execute()
+        if not res.data:
+            raise HTTPException(404, "No saved profile")
+        return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning("profile lookup failed: %s", e)
+        raise HTTPException(500, "Profile lookup failed")
+
+
+# ----------------------- Reviews -----------------------
+@api_router.get("/public/reviews")
+async def list_public_reviews():
+    """Returns up to 30 most-recent approved reviews."""
+    try:
+        res = sb.table("reviews").select(
+            "id, name, rating, comment, created_at"
+        ).eq("is_approved", True).order("created_at", desc=True).limit(30).execute()
+        return {"reviews": res.data or []}
+    except Exception as e:
+        logging.warning("reviews fetch failed: %s", e)
+        return {"reviews": []}
+
+
+@api_router.post("/reviews")
+async def create_review(body: ReviewIn):
+    """Public review submission. Always inserted as is_approved=false so the
+    admin can moderate before it appears on the site."""
+    if body.rating < 1 or body.rating > 5:
+        raise HTTPException(400, "Rating must be 1–5")
+    name = (body.name or "").strip()
+    comment = (body.comment or "").strip()
+    if len(name) < 2 or len(comment) < 4:
+        raise HTTPException(400, "Name and comment too short")
+    try:
+        sb.table("reviews").insert({
+            "name": name[:80],
+            "phone": (body.phone or None),
+            "rating": body.rating,
+            "comment": comment[:600],
+            "is_approved": False,
+            "order_id": body.order_id or None,
+        }).execute()
+        return {"ok": True, "message": "Thanks! Your review will appear once approved."}
+    except Exception as e:
+        logging.exception("review insert failed")
+        raise HTTPException(500, f"Could not save review: {e}")
+
+
 # ----------------------- Razorpay payment -----------------------
 @api_router.post("/payments/create-order")
 async def create_payment_order(payload: CreateOrderIn):
@@ -242,6 +332,12 @@ async def verify_payment(body: VerifyPaymentIn):
         order_row = res.data[0] if res.data else None
         # Clean up draft
         ORDER_DRAFTS.pop(body.local_order_id, None)
+        # Persist customer profile so next order auto-prefills
+        upsert_customer_profile(
+            draft["customer_name"], draft["customer_phone"],
+            draft.get("customer_address"),
+            draft.get("delivery_lat"), draft.get("delivery_lng"),
+        )
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("order insert failed")
@@ -268,6 +364,12 @@ async def create_cod_order(payload: CreateOrderIn):
         }
         res = sb.table("orders").insert(insert_payload).execute()
         order_row = res.data[0] if res.data else None
+        # Persist customer profile so next order auto-prefills
+        upsert_customer_profile(
+            payload.customer_name, payload.customer_phone,
+            payload.customer_address,
+            payload.delivery_lat, payload.delivery_lng,
+        )
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("cod order failed")

@@ -3,6 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
   ClipboardList, Package, TrendingUp, ImageIcon, Loader2, Store,
+  Star, MessageSquare, CheckCircle2,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -43,6 +44,7 @@ const Admin = () => {
   const [shop, setShop] = useState(null);
   const [shopDraft, setShopDraft] = useState(null);
   const [savingShop, setSavingShop] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
@@ -50,7 +52,37 @@ const Admin = () => {
   }, [session, isAdmin]);
 
   const loadAll = async () => {
-    await Promise.all([loadProducts(), loadOrders(), loadShop()]);
+    await Promise.all([loadProducts(), loadOrders(), loadShop(), loadReviews()]);
+  };
+
+  const loadReviews = async () => {
+    const { data } = await supabase
+      .from('reviews')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setReviews(data || []);
+  };
+
+  const setReviewApproved = async (id, approved) => {
+    const { error } = await supabase
+      .from('reviews')
+      .update({ is_approved: approved })
+      .eq('id', id);
+    if (error) toast({ title: 'Update failed', description: error.message });
+    else {
+      toast({ title: approved ? 'Review approved' : 'Review hidden' });
+      loadReviews();
+    }
+  };
+
+  const deleteReview = async (id) => {
+    if (!window.confirm('Delete this review permanently?')) return;
+    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    if (error) toast({ title: 'Delete failed', description: error.message });
+    else {
+      toast({ title: 'Review deleted' });
+      loadReviews();
+    }
   };
 
   const loadShop = async () => {
@@ -578,6 +610,102 @@ const Admin = () => {
                     >
                       <Trash2 className="w-3.5 h-3.5 inline" /> Delete
                     </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Reviews moderation */}
+        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-reviews-panel">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-[#B93826]" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Customer Reviews</h3>
+                <p className="text-xs text-[#7B5A48] mt-1">
+                  Approve to publish on home page · {reviews.filter((r) => !r.is_approved).length} pending ·{' '}
+                  {reviews.filter((r) => r.is_approved).length} live
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {reviews.length === 0 ? (
+            <div className="text-center py-10 text-[#7B5A48] text-sm">
+              No reviews yet. They'll show up here when customers submit them.
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {reviews.map((r) => (
+                <li
+                  key={r.id}
+                  className={`border rounded-xl p-4 ${
+                    r.is_approved ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#EADFCF] bg-[#FFF7DA]/30'
+                  }`}
+                  data-testid={`admin-review-${r.id}`}
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-[180px]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="font-semibold text-[#2A1A14]">{r.name}</div>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${
+                                i <= (r.rating || 0)
+                                  ? 'text-[#F5A623] fill-[#F5A623]'
+                                  : 'text-[#EADFCF]'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            r.is_approved
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {r.is_approved ? 'Live' : 'Pending'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#7B5A48] mt-0.5">
+                        {new Date(r.created_at).toLocaleString('en-IN')}
+                        {r.phone ? ` · ${r.phone}` : ''}
+                      </div>
+                      <p className="mt-2 text-sm text-[#3B2416] leading-relaxed">{r.comment}</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {r.is_approved ? (
+                        <button
+                          onClick={() => setReviewApproved(r.id, false)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-[#EADFCF] text-[#3B2416] hover:border-[#B93826]/40"
+                          data-testid={`admin-review-hide-${r.id}`}
+                        >
+                          Hide
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setReviewApproved(r.id, true)}
+                          className="text-xs px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1"
+                          data-testid={`admin-review-approve-${r.id}`}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteReview(r.id)}
+                        className="text-xs px-3 py-1.5 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                        data-testid={`admin-review-delete-${r.id}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </li>
               ))}

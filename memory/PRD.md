@@ -46,6 +46,7 @@ Clone `karthikachickencentre.shop` into an exact-UI replica branded as **Chicken
 - 2026-04-25: "Get App" button + InstallAppDialog (Android/iPhone/PC tabs + QR).
 - 2026-04-28: Production polish: SEO meta + JSON-LD schema, OG/Twitter cards, font preconnect, lazy-loaded product images, "IN CART" badge, live qty × price calc on cards, bigger Add buttons, WhatsApp FAB with hardcoded fallback phone.
 - 2026-04-29: Replaced auto-open WhatsApp on bill with explicit "Alert shop on WhatsApp" CTA + warning banner. Removed unused CallMeBot backend code (urllib + notifier function + env vars). Bill.jsx now shows a clear "Last step — alert the shop owner" prompt above the green WA button using the same `wa.me` deep link to admin (919619417452).
+- 2026-04-29: **Customer Reviews** + **Saved Address** features added. (1) New `reviews` table with admin moderation (pending → approved). Public reviews section on home page after Visit Us with "Write a review" CTA. Bill page also has "Got your meat? Leave a review" button after the order. Admin dashboard now has a Reviews moderation panel (Approve / Hide / Delete). (2) New `customer_profiles` table auto-saves name + address + lat/lng on every order. CheckoutDialog hydrates from localStorage on open and from server on 10-digit phone entry, showing a "Saved address loaded" badge so customers don't retype anything for repeat orders. Migration: `supabase_migrations/2026-04-29-reviews-and-profiles.sql` (must run once in Supabase SQL editor).
 
 ## Credentials
 - Admin: `knair9843@gmail.com` / `Ocean1234@`
@@ -54,6 +55,8 @@ Clone `karthikachickencentre.shop` into an exact-UI replica branded as **Chicken
 ## Backlog / P1
 - Order tracking page for customers (with order ID lookup)
 - Push notifications on new orders (Capacitor + FCM)
-- WhatsApp "Order Confirmed" auto-message via Twilio
+- WhatsApp "Order Confirmed" auto-message via Meta Cloud API (when FB block clears)
 - Marathi language support
 - Add Eggs / Mutton categories with their own grid
+- Photo upload on customer reviews (currently text + rating only)
+- Multiple saved addresses per phone (Home / Office labels) — currently just last-used

@@ -7,6 +7,7 @@ import Hero from '../components/Hero';
 const TodayPrice = lazy(() => import('../components/TodayPrice'));
 const Shop = lazy(() => import('../components/Shop'));
 const VisitShop = lazy(() => import('../components/VisitShop'));
+const Reviews = lazy(() => import('../components/Reviews'));
 const Footer = lazy(() => import('../components/Footer'));
 const CartDrawer = lazy(() => import('../components/CartDrawer'));
 
@@ -29,6 +30,9 @@ const Home = () => {
       </Suspense>
       <Suspense fallback={<SectionSkeleton height="500px" />}>
         <VisitShop />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton height="400px" />}>
+        <Reviews />
       </Suspense>
       <Suspense fallback={<SectionSkeleton height="200px" />}>
         <Footer />

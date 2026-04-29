@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { CheckCircle2, MessageCircle, Printer, Copy, Check, ArrowDown } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Printer, Copy, Check, ArrowDown, Star } from 'lucide-react';
 import { formatQty, calcSubtotal, UNIT_SHORT, normalizeUnit } from '../lib/units';
+import ReviewDialog from './ReviewDialog';
 
 // Single source of truth for the admin/shop WhatsApp number that
 // receives every new order notification.
@@ -40,6 +41,7 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
   const billRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [notified, setNotified] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const orderId = order?.id ? order.id.slice(0, 8).toUpperCase() : null;
   const date = new Date().toLocaleString('en-IN', {
@@ -297,6 +299,26 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
       >
         Done
       </button>
+
+      {/* Review nudge — appears once order is placed; the customer can come
+          back to the same Bill and tap this after their meat arrives. */}
+      <button
+        type="button"
+        onClick={() => setReviewOpen(true)}
+        data-testid="bill-leave-review-btn"
+        className="mt-3 w-full py-2.5 rounded-full border-2 border-[#F5A623] bg-[#FFF7DA] hover:bg-[#FFEFB7] text-[#5C3A14] text-sm font-medium flex items-center justify-center gap-2 print:hidden"
+      >
+        <Star className="w-4 h-4 text-[#F5A623] fill-[#F5A623]" />
+        Got your meat? Leave a review
+      </button>
+
+      <ReviewDialog
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        orderId={order?.id || null}
+        prefillName={customer?.name || ''}
+        phone={customer?.phone || null}
+      />
     </div>
   );
 };
