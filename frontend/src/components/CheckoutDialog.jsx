@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2, Sparkles } from 'lucide-react';
+import { X, MapPin, Loader2, Smartphone, Banknote, CheckCircle2, Sparkles, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { useCart } from '../context/CartContext';
@@ -21,17 +21,26 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [paymentMethod, setPaymentMethod] = useState('online'); // online | cod
   const [profileLookup, setProfileLookup] = useState('idle'); // idle | loading | found
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
+  // Coupon flow state
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState(null); // { code, discount } when applied
+  const [couponError, setCouponError] = useState('');
+  const [couponChecking, setCouponChecking] = useState(false);
   // Snapshot the cart at order placement so the Bill is stable even after
   // the parent cart state is cleared (or items change).
   const [orderSnapshot, setOrderSnapshot] = useState(null);
 
-  // Final amounts shown in the summary. Discount only applies when the
-  // server has confirmed this phone has never placed an order before.
-  const discount = useMemo(
+  // Final amounts shown in the summary. The bigger of (first-order 10%) and
+  // (coupon discount) wins — they don't stack.
+  const firstOrderDiscount = useMemo(
     () => (firstOrderEligible ? +(subtotal * FIRST_ORDER_DISCOUNT_PCT / 100).toFixed(2) : 0),
     [firstOrderEligible, subtotal]
   );
-  const finalTotal = +(subtotal - discount).toFixed(2);
+  const couponDiscount = coupon?.discount || 0;
+  const useCoupon = couponDiscount > firstOrderDiscount;
+  const discount = useCoupon ? couponDiscount : firstOrderDiscount;
+  const finalTotal = +Math.max(subtotal - discount, 0).toFixed(2);
 
   // On open, hydrate the form from the most-recent localStorage profile so
   // returning customers don't have to retype anything.
@@ -105,6 +114,69 @@ const CheckoutDialog = ({ open, onClose }) => {
   }, [form.phone]);
 
   if (!open) return null;
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) {
+      setCouponError('Enter a code');
+      return;
+    }
+    setCouponChecking(true);
+    setCouponError('');
+    try {
+      const { data } = await api.post('/coupons/validate', {
+        code,
+        phone: form.phone || null,
+        items_total: subtotal,
+      });
+      if (data.valid) {
+        setCoupon({ code, discount: Number(data.discount) });
+        setCouponError('');
+      } else {
+        setCoupon(null);
+        setCouponError(data.error || 'Invalid code');
+      }
+    } catch (err) {
+      setCoupon(null);
+      setCouponError(err?.response?.data?.detail || 'Could not validate code');
+    } finally {
+      setCouponChecking(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+  };
+
+  // Re-validate the applied coupon when the cart subtotal or phone changes
+  // (e.g. customer edits cart after applying — keeps min-order check fresh).
+  useEffect(() => {
+    if (!coupon || !open) return;
+    let cancelled = false;
+    api
+      .post('/coupons/validate', {
+        code: coupon.code,
+        phone: form.phone || null,
+        items_total: subtotal,
+      })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data.valid) {
+          setCoupon({ code: coupon.code, discount: Number(data.discount) });
+          setCouponError('');
+        } else {
+          setCoupon(null);
+          setCouponError(data.error || 'Coupon no longer valid');
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, form.phone]);
 
   const captureLocation = async () => {
     // NATIVE (Capacitor) path — uses Android/iOS location API
@@ -218,6 +290,7 @@ const CheckoutDialog = ({ open, onClose }) => {
       })),
       total_amount: finalTotal,
       apply_first_order_discount: firstOrderEligible,
+      coupon_code: useCoupon ? coupon.code : null,
       notes: '',
     };
 
@@ -233,7 +306,8 @@ const CheckoutDialog = ({ open, onClose }) => {
       subtotal: finalTotal,
       grossSubtotal: subtotal,
       discount,
-      firstOrderDiscountApplied: firstOrderEligible,
+      firstOrderDiscountApplied: firstOrderEligible && !useCoupon,
+      couponCode: useCoupon ? coupon.code : null,
       customer: { name: form.name, phone: form.phone, address: form.address },
     };
 
@@ -348,6 +422,10 @@ const CheckoutDialog = ({ open, onClose }) => {
     setPaymentMethod('online');
     setProfileLookup('idle');
     setFirstOrderEligible(false);
+    setCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+    setCouponOpen(false);
     onClose();
     setIsOpen(false);
   };
@@ -464,7 +542,7 @@ const CheckoutDialog = ({ open, onClose }) => {
               )}
             </div>
 
-            {firstOrderEligible && (
+            {firstOrderEligible && !useCoupon && (
               <div
                 className="rounded-xl bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] p-4 flex items-start gap-3"
                 data-testid="first-order-discount-banner"
@@ -483,6 +561,85 @@ const CheckoutDialog = ({ open, onClose }) => {
               </div>
             )}
 
+            {/* Coupon code — collapsible */}
+            <div className="rounded-xl border border-[#EADFCF] bg-white overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCouponOpen((v) => !v)}
+                data-testid="coupon-toggle-btn"
+                className="w-full px-4 py-3 flex items-center justify-between text-sm text-[#3B2416] hover:bg-[#FAF4EC] transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-[#B93826]" />
+                  {coupon ? (
+                    <span className="font-semibold text-emerald-700">
+                      Coupon <span className="font-mono">{coupon.code}</span> applied · −₹
+                      {coupon.discount.toFixed(0)}
+                    </span>
+                  ) : (
+                    <span className="font-medium">Have a coupon code?</span>
+                  )}
+                </span>
+                {couponOpen ? <ChevronUp className="w-4 h-4 text-[#7B5A48]" /> : <ChevronDown className="w-4 h-4 text-[#7B5A48]" />}
+              </button>
+              {couponOpen && (
+                <div className="px-4 pb-4 pt-1 border-t border-[#EADFCF] bg-[#FAF4EC]">
+                  {coupon ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs text-[#7B5A48]">
+                        {useCoupon ? (
+                          <>Coupon discount applied (better than first-order offer).</>
+                        ) : (
+                          <>First-order 10% gives you a bigger saving — using that instead.</>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        data-testid="coupon-remove-btn"
+                        className="text-xs px-3 py-1 rounded-full border border-[#EADFCF] hover:border-[#B93826]/40 text-[#3B2416]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              applyCoupon();
+                            }
+                          }}
+                          placeholder="e.g. WELCOME20"
+                          className="flex-1 px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm font-mono uppercase tracking-wide"
+                          data-testid="coupon-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyCoupon}
+                          disabled={couponChecking || !couponInput.trim()}
+                          data-testid="coupon-apply-btn"
+                          className="px-4 py-2.5 rounded-lg bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium disabled:opacity-60 flex items-center gap-1.5"
+                        >
+                          {couponChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <div className="mt-2 text-xs text-[#B93826]" data-testid="coupon-error">
+                          {couponError}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="rounded-xl bg-[#F3EADB] p-4">
               <div className="text-xs text-[#7B5A48] mb-2">Order summary</div>
               <ul className="space-y-1 text-sm text-[#3B2416]">
@@ -493,7 +650,7 @@ const CheckoutDialog = ({ open, onClose }) => {
                   </li>
                 ))}
               </ul>
-              {firstOrderEligible && discount > 0 && (
+              {discount > 0 && (
                 <>
                   <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between text-sm text-[#3B2416]">
                     <span>Subtotal</span>
@@ -501,9 +658,13 @@ const CheckoutDialog = ({ open, onClose }) => {
                   </div>
                   <div
                     className="flex justify-between text-sm text-emerald-700 font-medium"
-                    data-testid="first-order-discount-line"
+                    data-testid="discount-line"
                   >
-                    <span>First-order discount ({FIRST_ORDER_DISCOUNT_PCT}%)</span>
+                    <span>
+                      {useCoupon
+                        ? `Coupon ${coupon.code}`
+                        : `First-order discount (${FIRST_ORDER_DISCOUNT_PCT}%)`}
+                    </span>
                     <span>− ₹{discount.toFixed(0)}</span>
                   </div>
                 </>
@@ -590,6 +751,7 @@ const CheckoutDialog = ({ open, onClose }) => {
             grossSubtotal={orderSnapshot.grossSubtotal}
             discount={orderSnapshot.discount}
             firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
+            couponCode={orderSnapshot.couponCode}
             onDone={handleDone}
           />
         )}

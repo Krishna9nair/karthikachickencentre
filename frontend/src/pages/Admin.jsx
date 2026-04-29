@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
   ClipboardList, Package, TrendingUp, ImageIcon, Loader2, Store,
-  Star, MessageSquare, CheckCircle2,
+  Star, MessageSquare, CheckCircle2, Tag,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -45,6 +45,15 @@ const Admin = () => {
   const [shopDraft, setShopDraft] = useState(null);
   const [savingShop, setSavingShop] = useState(false);
   const [reviews, setReviews] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [showAddCoupon, setShowAddCoupon] = useState(false);
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    discount_type: 'pct',
+    discount_value: '',
+    min_order_amount: '',
+    valid_until: '',
+  });
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
@@ -52,7 +61,59 @@ const Admin = () => {
   }, [session, isAdmin]);
 
   const loadAll = async () => {
-    await Promise.all([loadProducts(), loadOrders(), loadShop(), loadReviews()]);
+    await Promise.all([loadProducts(), loadOrders(), loadShop(), loadReviews(), loadCoupons()]);
+  };
+
+  const loadCoupons = async () => {
+    const { data } = await supabase
+      .from('coupons')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setCoupons(data || []);
+  };
+
+  const addCoupon = async () => {
+    const code = newCoupon.code.trim().toUpperCase();
+    const value = parseFloat(newCoupon.discount_value);
+    if (!code || isNaN(value) || value <= 0) {
+      toast({ title: 'Invalid coupon', description: 'Code and a positive discount value required.' });
+      return;
+    }
+    const payload = {
+      code,
+      discount_type: newCoupon.discount_type,
+      discount_value: value,
+      min_order_amount: parseFloat(newCoupon.min_order_amount) || 0,
+      valid_until: newCoupon.valid_until ? new Date(newCoupon.valid_until).toISOString() : null,
+      is_active: true,
+    };
+    const { error } = await supabase.from('coupons').upsert(payload, { onConflict: 'code' });
+    if (error) toast({ title: 'Save failed', description: error.message });
+    else {
+      toast({ title: 'Coupon saved' });
+      setShowAddCoupon(false);
+      setNewCoupon({ code: '', discount_type: 'pct', discount_value: '', min_order_amount: '', valid_until: '' });
+      loadCoupons();
+    }
+  };
+
+  const toggleCouponActive = async (c) => {
+    const { error } = await supabase
+      .from('coupons')
+      .update({ is_active: !c.is_active })
+      .eq('code', c.code);
+    if (error) toast({ title: 'Update failed', description: error.message });
+    else loadCoupons();
+  };
+
+  const deleteCoupon = async (code) => {
+    if (!window.confirm(`Delete coupon ${code}? This cannot be undone.`)) return;
+    const { error } = await supabase.from('coupons').delete().eq('code', code);
+    if (error) toast({ title: 'Delete failed', description: error.message });
+    else {
+      toast({ title: 'Coupon deleted' });
+      loadCoupons();
+    }
   };
 
   const loadReviews = async () => {
@@ -709,6 +770,163 @@ const Admin = () => {
                   </div>
                 </li>
               ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Coupon codes */}
+        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-coupons-panel">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
+                <Tag className="w-5 h-5 text-[#B93826]" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Coupon Codes</h3>
+                <p className="text-xs text-[#7B5A48] mt-1">
+                  Create discount codes. One use per phone number.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAddCoupon(true)}
+              data-testid="admin-add-coupon-btn"
+              className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> New coupon
+            </button>
+          </div>
+
+          {showAddCoupon && (
+            <div className="border border-dashed border-[#B93826] rounded-xl p-4 mb-4 bg-[#FAF4EC]">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <input
+                  placeholder="CODE (e.g. WELCOME20)"
+                  value={newCoupon.code}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm font-mono uppercase tracking-wide"
+                  data-testid="admin-new-coupon-code"
+                />
+                <select
+                  value={newCoupon.discount_type}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm bg-white"
+                  data-testid="admin-new-coupon-type"
+                >
+                  <option value="pct">% off</option>
+                  <option value="flat">₹ flat off</option>
+                </select>
+                <input
+                  type="number"
+                  placeholder={newCoupon.discount_type === 'pct' ? '% (e.g. 20)' : '₹ off'}
+                  value={newCoupon.discount_value}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  data-testid="admin-new-coupon-value"
+                />
+                <input
+                  type="number"
+                  placeholder="Min order ₹ (optional)"
+                  value={newCoupon.min_order_amount}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  data-testid="admin-new-coupon-min"
+                />
+                <input
+                  type="date"
+                  placeholder="Expires (optional)"
+                  value={newCoupon.valid_until}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, valid_until: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  data-testid="admin-new-coupon-expiry"
+                />
+              </div>
+              <div className="mt-3 flex gap-2 justify-end">
+                <button
+                  onClick={() => setShowAddCoupon(false)}
+                  className="px-4 py-1.5 rounded-full border border-[#EADFCF] text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addCoupon}
+                  data-testid="admin-save-coupon-btn"
+                  className="px-4 py-1.5 rounded-full bg-[#B93826] text-white text-sm"
+                >
+                  Save coupon
+                </button>
+              </div>
+            </div>
+          )}
+
+          {coupons.length === 0 ? (
+            <div className="text-center py-10 text-[#7B5A48] text-sm">
+              No coupons yet. Click "New coupon" to create one.
+            </div>
+          ) : (
+            <ul className="divide-y divide-[#EADFCF]">
+              {coupons.map((c) => {
+                const expired =
+                  c.valid_until && new Date(c.valid_until) < new Date();
+                return (
+                  <li key={c.code} className="py-3 flex items-center flex-wrap gap-3">
+                    <div className="font-mono font-bold text-[#2A1A14] tracking-wide">{c.code}</div>
+                    <div className="text-sm text-[#3B2416]">
+                      {c.discount_type === 'pct'
+                        ? `${Number(c.discount_value)}% off`
+                        : `₹${Number(c.discount_value)} off`}
+                    </div>
+                    {Number(c.min_order_amount) > 0 && (
+                      <div className="text-xs text-[#7B5A48]">
+                        min ₹{Number(c.min_order_amount).toFixed(0)}
+                      </div>
+                    )}
+                    {c.valid_until && (
+                      <div
+                        className={`text-xs ${
+                          expired ? 'text-[#B93826] font-semibold' : 'text-[#7B5A48]'
+                        }`}
+                      >
+                        {expired ? 'EXPIRED · ' : 'until '}
+                        {new Date(c.valid_until).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </div>
+                    )}
+                    <span
+                      className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        c.is_active && !expired
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {!c.is_active ? 'Disabled' : expired ? 'Expired' : 'Live'}
+                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <label className="flex items-center gap-2 text-xs text-[#7B5A48]">
+                        <input
+                          type="checkbox"
+                          checked={c.is_active}
+                          onChange={() => toggleCouponActive(c)}
+                          className="w-4 h-4 accent-[#B93826]"
+                          data-testid={`admin-coupon-toggle-${c.code}`}
+                        />
+                        Active
+                      </label>
+                      <button
+                        onClick={() => deleteCoupon(c.code)}
+                        data-testid={`admin-coupon-delete-${c.code}`}
+                        className="p-2 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

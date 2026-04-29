@@ -47,6 +47,7 @@ const Bill = ({
   grossSubtotal,
   discount = 0,
   firstOrderDiscountApplied = false,
+  couponCode = null,
 }) => {
   const billRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -247,6 +248,15 @@ const Bill = ({
                 data-testid="bill-discount-line"
               >
                 First-order 10% off: − ₹{Number(discount).toFixed(0)}
+                {grossSubtotal ? ` (was ₹${Number(grossSubtotal).toFixed(0)})` : ''}
+              </div>
+            )}
+            {couponCode && discount > 0 && (
+              <div
+                className="text-[10px] text-emerald-700 font-medium mt-1"
+                data-testid="bill-coupon-line"
+              >
+                Coupon {couponCode}: − ₹{Number(discount).toFixed(0)}
                 {grossSubtotal ? ` (was ₹${Number(grossSubtotal).toFixed(0)})` : ''}
               </div>
             )}

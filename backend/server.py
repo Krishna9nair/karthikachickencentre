@@ -55,6 +55,13 @@ class CreateOrderIn(BaseModel):
     total_amount: float
     notes: Optional[str] = ""
     apply_first_order_discount: bool = False
+    coupon_code: Optional[str] = None
+
+
+class CouponValidateIn(BaseModel):
+    code: str
+    phone: Optional[str] = None
+    items_total: float
 
 
 class VerifyPaymentIn(BaseModel):
@@ -123,20 +130,113 @@ def is_first_time_customer(phone: str) -> bool:
         return False
 
 
-def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, str]:
-    """Server-side source of truth for the order total. Recomputes the items
-    sum and applies the first-order discount only if the phone is genuinely
-    first-time. Returns (final_total, discount_applied, notes_suffix)."""
+def _compute_coupon_discount(code: str, phone: Optional[str], items_total: float) -> Dict[str, Any]:
+    """Validates a coupon code against current state. Returns a dict with:
+        valid: bool, discount: float, error: str|None, coupon: row|None
+    Validation rules:
+        - code exists and is_active = true
+        - not expired (valid_until is null or in the future)
+        - items_total >= min_order_amount
+        - phone hasn't already redeemed this code (if phone provided)"""
+    code = (code or "").strip().upper()
+    if not code:
+        return {"valid": False, "discount": 0.0, "error": "Empty code", "coupon": None}
+    try:
+        res = sb.table("coupons").select("*").eq("code", code).limit(1).execute()
+    except Exception as e:
+        logging.warning("coupon lookup failed: %s", e)
+        return {"valid": False, "discount": 0.0, "error": "Lookup failed", "coupon": None}
+    if not res.data:
+        return {"valid": False, "discount": 0.0, "error": "Invalid code", "coupon": None}
+    c = res.data[0]
+    if not c.get("is_active"):
+        return {"valid": False, "discount": 0.0, "error": "Coupon disabled", "coupon": c}
+    valid_until = c.get("valid_until")
+    if valid_until:
+        try:
+            if datetime.fromisoformat(valid_until.replace("Z", "+00:00")) < datetime.now(timezone.utc):
+                return {"valid": False, "discount": 0.0, "error": "Coupon expired", "coupon": c}
+        except Exception:
+            pass
+    min_amt = float(c.get("min_order_amount") or 0)
+    if items_total < min_amt:
+        return {
+            "valid": False, "discount": 0.0,
+            "error": f"Add ₹{round(min_amt - items_total)} more to use this code (min ₹{round(min_amt)})",
+            "coupon": c,
+        }
+    # Per-phone usage check (one-per-phone policy)
+    if phone and len(phone) >= 10:
+        try:
+            uses = sb.table("coupon_uses").select("phone").eq(
+                "code", code
+            ).eq("phone", phone).limit(1).execute()
+            if uses.data:
+                return {
+                    "valid": False, "discount": 0.0,
+                    "error": "You've already used this code", "coupon": c,
+                }
+        except Exception as e:
+            logging.warning("coupon usage check failed: %s", e)
+    # Compute discount amount
+    if c["discount_type"] == "pct":
+        disc = items_total * float(c["discount_value"]) / 100.0
+    else:  # flat
+        disc = float(c["discount_value"])
+    disc = round(min(disc, items_total), 2)  # never exceed total
+    return {"valid": True, "discount": disc, "error": None, "coupon": c}
+
+
+def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, Optional[str], str]:
+    """Server-side source of truth for the order total. Considers BOTH the
+    first-order 10% discount and any provided coupon — applies the bigger one.
+    Returns (final_total, first_order_applied, coupon_code_applied, notes_suffix)."""
     items_sum = sum((i.price or 0) * (i.qty or 0) for i in payload.items)
-    discount_applied = False
-    note_suffix = ""
+    items_sum = round(items_sum, 2)
+
+    # Possibility 1: first-order 10% discount
+    first_disc = 0.0
     if payload.apply_first_order_discount and is_first_time_customer(
         payload.customer_phone
     ):
-        items_sum = round(items_sum * (1 - FIRST_ORDER_DISCOUNT_PCT / 100), 2)
-        discount_applied = True
-        note_suffix = f" [First-order {FIRST_ORDER_DISCOUNT_PCT}% off applied]"
-    return round(items_sum, 2), discount_applied, note_suffix
+        first_disc = round(items_sum * FIRST_ORDER_DISCOUNT_PCT / 100, 2)
+
+    # Possibility 2: coupon discount
+    coupon_disc = 0.0
+    coupon_code_used: Optional[str] = None
+    if payload.coupon_code:
+        result = _compute_coupon_discount(
+            payload.coupon_code, payload.customer_phone, items_sum
+        )
+        if result["valid"]:
+            coupon_disc = result["discount"]
+            coupon_code_used = (payload.coupon_code or "").strip().upper()
+
+    # Whichever discount is bigger wins (they don't stack)
+    if coupon_disc >= first_disc and coupon_disc > 0:
+        final_total = round(items_sum - coupon_disc, 2)
+        suffix = f" [Coupon {coupon_code_used} applied: -₹{coupon_disc:.0f}]"
+        return final_total, False, coupon_code_used, suffix
+    if first_disc > 0:
+        final_total = round(items_sum - first_disc, 2)
+        suffix = f" [First-order {FIRST_ORDER_DISCOUNT_PCT}% off applied]"
+        return final_total, True, None, suffix
+    return items_sum, False, None, ""
+
+
+def record_coupon_use(code: str, phone: str, order_id: Optional[str]) -> None:
+    """Best-effort log of coupon redemption. Failures must never break the
+    order — they just mean the customer might be able to reuse the code."""
+    if not code or not phone or len(phone) < 10:
+        return
+    try:
+        sb.table("coupon_uses").insert({
+            "code": code.strip().upper(),
+            "phone": phone,
+            "order_id": order_id,
+        }).execute()
+    except Exception as e:
+        logging.warning("coupon_use insert failed for %s/%s: %s", code, phone, e)
 
 
 # ----------------------- Auth Helpers -----------------------
@@ -304,6 +404,22 @@ async def create_review(body: ReviewIn):
         raise HTTPException(500, f"Could not save review: {e}")
 
 
+# ----------------------- Coupons -----------------------
+@api_router.post("/coupons/validate")
+async def validate_coupon(body: CouponValidateIn):
+    """Live validation called from the checkout dialog. Returns the discount
+    amount or a friendly error message. Does NOT redeem the coupon — that
+    only happens when the order is placed."""
+    if body.items_total <= 0:
+        return {"valid": False, "discount": 0, "error": "Cart is empty"}
+    result = _compute_coupon_discount(body.code, body.phone, body.items_total)
+    return {
+        "valid": result["valid"],
+        "discount": result["discount"],
+        "error": result["error"],
+    }
+
+
 # ----------------------- Razorpay payment -----------------------
 @api_router.post("/payments/create-order")
 async def create_payment_order(payload: CreateOrderIn):
@@ -311,8 +427,8 @@ async def create_payment_order(payload: CreateOrderIn):
     if not payload.items:
         raise HTTPException(400, "Empty cart")
     # Server is the source of truth for total — re-compute from items, apply
-    # the first-order discount only if the customer is genuinely first-time.
-    final_total, discount_applied, note_suffix = resolve_order_total(payload)
+    # the bigger of (first-order discount, coupon discount) only if eligible.
+    final_total, first_order_applied, coupon_used, note_suffix = resolve_order_total(payload)
     if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
@@ -330,7 +446,8 @@ async def create_payment_order(payload: CreateOrderIn):
         draft = payload.dict()
         draft["total_amount"] = final_total
         draft["notes"] = (draft.get("notes") or "") + note_suffix
-        draft["_discount_applied"] = discount_applied
+        draft["_first_order_applied"] = first_order_applied
+        draft["_coupon_used"] = coupon_used
         ORDER_DRAFTS[local_id] = {
             "rzp_order_id": rzp_order["id"],
             "draft": draft,
@@ -341,7 +458,9 @@ async def create_payment_order(payload: CreateOrderIn):
             "razorpay_key_id": RAZORPAY_KEY_ID,
             "amount": amount_paise,
             "currency": "INR",
-            "discount_applied": discount_applied,
+            "discount_applied": first_order_applied or bool(coupon_used),
+            "first_order_applied": first_order_applied,
+            "coupon_used": coupon_used,
             "final_total": final_total,
         }
     except Exception as e:
@@ -397,6 +516,10 @@ async def verify_payment(body: VerifyPaymentIn):
             draft.get("customer_address"),
             draft.get("delivery_lat"), draft.get("delivery_lng"),
         )
+        # Record coupon redemption (if any)
+        coupon_used = draft.get("_coupon_used")
+        if coupon_used and order_row:
+            record_coupon_use(coupon_used, draft["customer_phone"], order_row.get("id"))
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("order insert failed")
@@ -408,7 +531,7 @@ async def create_cod_order(payload: CreateOrderIn):
     """Cash-on-delivery: insert the order directly with payment_status='cod_pending'."""
     if not payload.items:
         raise HTTPException(400, "Empty cart")
-    final_total, discount_applied, note_suffix = resolve_order_total(payload)
+    final_total, first_order_applied, coupon_used, note_suffix = resolve_order_total(payload)
     if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
@@ -432,7 +555,15 @@ async def create_cod_order(payload: CreateOrderIn):
             payload.customer_address,
             payload.delivery_lat, payload.delivery_lng,
         )
-        return {"ok": True, "order": order_row, "discount_applied": discount_applied}
+        # Record coupon redemption (if any)
+        if coupon_used and order_row:
+            record_coupon_use(coupon_used, payload.customer_phone, order_row.get("id"))
+        return {
+            "ok": True, "order": order_row,
+            "discount_applied": first_order_applied or bool(coupon_used),
+            "first_order_applied": first_order_applied,
+            "coupon_used": coupon_used,
+        }
     except Exception as e:
         logging.exception("cod order failed")
         raise HTTPException(500, f"Could not save order: {e}")
