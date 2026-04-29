@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, MessageCircle, Download, Printer, Copy, Check } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { CheckCircle2, MessageCircle, Printer, Copy, Check, ArrowDown } from 'lucide-react';
 import { formatQty, calcSubtotal, UNIT_SHORT, normalizeUnit } from '../lib/units';
 
 // Single source of truth for the admin/shop WhatsApp number that
@@ -55,19 +55,6 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
     paymentMethod,
   });
   const waAdminLink = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(adminMsg)}`;
-
-  // Auto-open WhatsApp once on first render so the customer just taps Send.
-  // Some browsers (esp. iOS) block this without a user gesture; in that case
-  // the visible "Notify Shop" button takes over.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      try {
-        window.open(waAdminLink, '_blank', 'noopener,noreferrer');
-      } catch (_) {}
-    }, 800);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handlePrint = () => {
     if (typeof window === 'undefined') return;
@@ -169,8 +156,7 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
         </div>
         <h4 className="mt-3 font-serif text-2xl text-[#2A1A14]">Order placed!</h4>
         <p className="text-sm text-[#7B5A48] mt-1 max-w-xs">
-          Your bill is below. WhatsApp should open automatically — just tap Send so
-          the shop gets your order.
+          Your bill is below. <b className="text-[#B93826]">One last step</b> — tap the green button to alert the shop owner on WhatsApp so your order starts being prepared.
         </p>
       </div>
 
@@ -258,33 +244,50 @@ const Bill = ({ order, items, subtotal, customer, paymentMethod, onDone }) => {
       </div>
 
       {/* Action buttons */}
-      <div className="mt-5 grid grid-cols-2 gap-2 print:hidden">
+      <div className="mt-5 print:hidden">
+        {/* Prominent prompt to alert the shop owner */}
+        <div className="rounded-xl bg-[#FFF7DA] border border-[#F0DC8A] px-4 py-3 flex items-start gap-3">
+          <div className="shrink-0 w-7 h-7 rounded-full bg-[#B93826] text-white flex items-center justify-center text-xs font-bold">
+            !
+          </div>
+          <div className="flex-1 text-[13px] leading-snug text-[#5C3A14]">
+            <div className="font-semibold text-[#2A1A14]">Last step — alert the shop owner</div>
+            Press the green button below to send your order details to the owner on WhatsApp. Without this, the shop won't know your order.
+          </div>
+        </div>
+        <div className="flex justify-center mt-2 mb-1 text-[#B93826] animate-bounce">
+          <ArrowDown className="w-5 h-5" />
+        </div>
+
         <a
           href={waAdminLink}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setNotified(true)}
           data-testid="bill-notify-shop-btn"
-          className="col-span-2 inline-flex items-center justify-center gap-2 py-3 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-semibold shadow-md transition-colors"
+          className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-bold text-base shadow-lg transition-colors ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-[#FAF4EC]"
         >
-          <MessageCircle className="w-4 h-4 fill-white" />
-          {notified ? 'Re-send to shop on WhatsApp' : 'Notify shop on WhatsApp'}
+          <MessageCircle className="w-5 h-5 fill-white" />
+          {notified ? 'Re-send to shop on WhatsApp' : 'Alert shop on WhatsApp'}
         </a>
-        <button
-          onClick={handlePrint}
-          data-testid="bill-print-btn"
-          className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
-        >
-          <Printer className="w-4 h-4" /> Print
-        </button>
-        <button
-          onClick={handleCopy}
-          data-testid="bill-copy-btn"
-          className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
-        >
-          {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copied!' : 'Copy bill'}
-        </button>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={handlePrint}
+            data-testid="bill-print-btn"
+            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+          >
+            <Printer className="w-4 h-4" /> Print
+          </button>
+          <button
+            onClick={handleCopy}
+            data-testid="bill-copy-btn"
+            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Copied!' : 'Copy bill'}
+          </button>
+        </div>
       </div>
 
       <button

@@ -45,6 +45,7 @@ Clone `karthikachickencentre.shop` into an exact-UI replica branded as **Chicken
 - 2026-04-25: EN ↔ HI language toggle (full dictionary, persists in localStorage).
 - 2026-04-25: "Get App" button + InstallAppDialog (Android/iPhone/PC tabs + QR).
 - 2026-04-28: Production polish: SEO meta + JSON-LD schema, OG/Twitter cards, font preconnect, lazy-loaded product images, "IN CART" badge, live qty × price calc on cards, bigger Add buttons, WhatsApp FAB with hardcoded fallback phone.
+- 2026-04-29: Replaced auto-open WhatsApp on bill with explicit "Alert shop on WhatsApp" CTA + warning banner. Removed unused CallMeBot backend code (urllib + notifier function + env vars). Bill.jsx now shows a clear "Last step — alert the shop owner" prompt above the green WA button using the same `wa.me` deep link to admin (919619417452).
 
 ## Credentials
 - Admin: `knair9843@gmail.com` / `Ocean1234@`
