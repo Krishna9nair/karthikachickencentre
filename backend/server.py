@@ -112,6 +112,21 @@ def sanitize_text(value: str, max_len: int) -> str:
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 ALLOWED_SLOT_STARTS = {"09:00", "11:00", "13:00", "15:00", "17:00", "19:00"}
+SLOT_CAPACITY = 10  # max orders per (date, slot)
+
+
+def slot_order_count(date: str, start: str) -> int:
+    """How many non-cancelled orders are already booked into this slot."""
+    try:
+        res = sb.table("orders").select("id", count="exact").eq(
+            "delivery_slot_date", date
+        ).eq("delivery_slot_start", start).neq(
+            "payment_status", "cancelled"
+        ).execute()
+        return int(getattr(res, "count", None) or len(res.data or []))
+    except Exception as e:
+        logging.warning("slot count failed: %s", e)
+        return 0
 
 
 def slot_fields(payload: "CreateOrderIn") -> Dict[str, Any]:
@@ -136,6 +151,11 @@ def slot_fields(payload: "CreateOrderIn") -> Dict[str, Any]:
         raise HTTPException(400, "Invalid slot time")
     if payload.delivery_slot_start not in ALLOWED_SLOT_STARTS:
         raise HTTPException(400, "Slot not allowed")
+    # Soft capacity check (10 orders per slot). Race conditions could let an
+    # 11th order squeak through under heavy concurrent load — that's fine for
+    # a small shop and easier than a DB-level lock.
+    if slot_order_count(payload.delivery_slot_date, payload.delivery_slot_start) >= SLOT_CAPACITY:
+        raise HTTPException(409, "This slot is fully booked. Please pick another.")
     return {
         "delivery_slot_date": payload.delivery_slot_date,
         "delivery_slot_start": payload.delivery_slot_start,
@@ -453,6 +473,28 @@ async def get_products():
 
 
 # ----------------------- Customer profile (saved address) -----------------------
+@api_router.get("/public/slot-availability")
+async def slot_availability(request: Request):
+    """Returns booked counts + capacity for today + tomorrow's slots so the
+    customer's checkout picker can grey out full slots and show 'X left'."""
+    rate_limit(request, "profile_lookup")
+    today = datetime.now(timezone.utc).date()
+    tomorrow = today.fromordinal(today.toordinal() + 1)
+    dates = [today.isoformat(), tomorrow.isoformat()]
+    out = []
+    for d in dates:
+        for s in sorted(ALLOWED_SLOT_STARTS):
+            booked = slot_order_count(d, s)
+            out.append({
+                "date": d,
+                "start": s,
+                "booked": booked,
+                "capacity": SLOT_CAPACITY,
+                "full": booked >= SLOT_CAPACITY,
+            })
+    return {"slots": out, "capacity": SLOT_CAPACITY}
+
+
 @api_router.get("/public/first-order-eligible/{phone}")
 async def check_first_order_eligible(phone: str, request: Request):
     """Lightweight check for the checkout dialog — returns whether this phone

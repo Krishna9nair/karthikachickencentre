@@ -55,6 +55,7 @@ const Admin = () => {
     valid_until: '',
   });
   const [disabledSlots, setDisabledSlots] = useState([]);
+  const [slotBookings, setSlotBookings] = useState({});
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
@@ -64,8 +65,26 @@ const Admin = () => {
   const loadAll = async () => {
     await Promise.all([
       loadProducts(), loadOrders(), loadShop(), loadReviews(),
-      loadCoupons(), loadDisabledSlots(),
+      loadCoupons(), loadDisabledSlots(), loadSlotBookings(),
     ]);
+  };
+
+  const loadSlotBookings = async () => {
+    // Count active orders per (date, slot) for today + tomorrow.
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from('orders')
+      .select('delivery_slot_date, delivery_slot_start, payment_status')
+      .gte('delivery_slot_date', todayIso)
+      .neq('payment_status', 'cancelled');
+    const map = {};
+    for (const r of data || []) {
+      if (!r.delivery_slot_date || !r.delivery_slot_start) continue;
+      const key = `${r.delivery_slot_date}|${(r.delivery_slot_start || '').slice(0, 5)}`;
+      map[key] = (map[key] || 0) + 1;
+    }
+    setSlotBookings(map);
   };
 
   const loadDisabledSlots = async () => {
@@ -356,7 +375,10 @@ const Admin = () => {
   const updateOrderStatus = async (id, status) => {
     const { error } = await supabase.from('orders').update({ payment_status: status }).eq('id', id);
     if (error) toast({ title: 'Update failed', description: error.message });
-    else loadOrders();
+    else {
+      loadOrders();
+      loadSlotBookings();
+    }
   };
 
   const deleteOrder = async (id) => {
@@ -366,6 +388,7 @@ const Admin = () => {
     else {
       toast({ title: 'Order deleted' });
       loadOrders();
+      loadSlotBookings();
     }
   };
 
@@ -1006,18 +1029,27 @@ const Admin = () => {
                     const isDisabled = disabledSlots.some(
                       (ds) => ds.slot_date === dateIso && (ds.slot_start || '').slice(0, 5) === s.start
                     );
+                    const booked = slotBookings[`${dateIso}|${s.start}`] || 0;
+                    const isFull = booked >= 10;
                     return (
                       <button
                         key={s.start}
                         onClick={() => toggleSlotDisabled(dateIso, s.start, isDisabled)}
                         data-testid={`admin-slot-${dateIso}-${s.start}`}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex flex-col items-center min-w-[88px] ${
                           isDisabled
                             ? 'bg-[#FCEEEE] text-[#B93826] border-[#B93826] line-through'
+                            : isFull
+                            ? 'bg-[#FFF1E0] text-[#B93826] border-[#B93826]'
                             : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/40'
                         }`}
                       >
-                        {s.label}
+                        <span>{s.label}</span>
+                        <span className={`text-[9px] mt-0.5 font-semibold ${
+                          isDisabled ? 'text-[#B93826]' : isFull ? 'text-[#B93826]' : 'text-[#7B5A48]'
+                        }`}>
+                          {booked}/10 booked{isFull ? ' · FULL' : ''}
+                        </span>
                       </button>
                     );
                   })}
