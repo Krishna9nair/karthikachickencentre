@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -9,11 +9,13 @@ import logging
 import hmac
 import hashlib
 import jwt
+import re
 import time
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Any, Dict
 
 
@@ -37,54 +39,133 @@ app = FastAPI(title="Fresh Cluck API")
 api_router = APIRouter(prefix="/api")
 
 
+# ----------------------- Security helpers -----------------------
+# Sliding-window in-memory rate limiter. Per-process (fine for our 1-pod
+# deployment); swap to Redis if we ever scale horizontally.
+_rate_buckets: Dict[str, deque] = defaultdict(deque)
+RATE_LIMITS = {
+    # endpoint_key: (max_requests, window_seconds)
+    "order": (5, 3600),         # 5 orders per hour per IP+phone
+    "review": (3, 3600),        # 3 reviews per hour per IP
+    "coupon_validate": (30, 60),  # 30 coupon checks per minute per IP
+    "rider_login": (10, 600),   # 10 rider login attempts per 10 min per IP
+    "profile_lookup": (60, 60), # 60 profile lookups per minute per IP
+}
+
+
+def _client_ip(request: Request) -> str:
+    """Extract the real client IP, respecting Vercel/Cloudflare/Kubernetes proxies."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(request: Request, bucket: str, extra_key: str = "") -> None:
+    """Raises 429 if the caller has exceeded the per-bucket quota."""
+    cap, window = RATE_LIMITS.get(bucket, (60, 60))
+    key = f"{bucket}:{_client_ip(request)}:{extra_key}"
+    now = time.time()
+    dq = _rate_buckets[key]
+    # Drop entries outside the sliding window
+    while dq and dq[0] < now - window:
+        dq.popleft()
+    if len(dq) >= cap:
+        retry = int(dq[0] + window - now) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many requests. Try again in {retry}s.",
+            headers={"Retry-After": str(retry)},
+        )
+    dq.append(now)
+
+
+# Reject obvious junk phone numbers (all same digit, sequential, etc.)
+_PHONE_RE = re.compile(r"^[6-9]\d{9}$")  # Indian mobile: starts 6/7/8/9, 10 digits
+
+
+def validate_indian_phone(phone: str) -> str:
+    """Returns a cleaned phone string or raises HTTPException(400)."""
+    cleaned = re.sub(r"\D", "", phone or "")
+    if not _PHONE_RE.match(cleaned):
+        raise HTTPException(400, "Enter a valid 10-digit Indian mobile number.")
+    # Block all-same-digit numbers like 9999999999, 7777777777
+    if len(set(cleaned)) == 1:
+        raise HTTPException(400, "That phone number doesn't look real.")
+    # Block trivially sequential numbers
+    if cleaned in ("9876543210", "1234567890", "0123456789"):
+        raise HTTPException(400, "That phone number doesn't look real.")
+    return cleaned
+
+
+def sanitize_text(value: str, max_len: int) -> str:
+    """Strip control chars + zero-widths, collapse whitespace, enforce max length."""
+    if not value:
+        return ""
+    # Remove control chars & zero-width chars used in homoglyph attacks
+    cleaned = re.sub(r"[\u0000-\u001F\u007F\u200B-\u200D\uFEFF]", "", value)
+    # Collapse runs of whitespace
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:max_len]
+
+
 # ----------------------- Models -----------------------
 class CartItem(BaseModel):
-    product_id: str
-    name: str
-    qty: float
-    price: float
+    product_id: str = Field(..., max_length=80)
+    name: str = Field(..., max_length=120)
+    qty: float = Field(..., gt=0, le=500)
+    price: float = Field(..., ge=0, le=100000)
 
 
 class CreateOrderIn(BaseModel):
-    customer_name: str
-    customer_phone: str
-    customer_address: Optional[str] = ""
-    delivery_lat: Optional[float] = None
-    delivery_lng: Optional[float] = None
-    items: List[CartItem]
-    total_amount: float
-    notes: Optional[str] = ""
+    customer_name: str = Field(..., min_length=2, max_length=80)
+    customer_phone: str = Field(..., min_length=10, max_length=15)
+    customer_address: Optional[str] = Field("", max_length=400)
+    delivery_lat: Optional[float] = Field(None, ge=-90, le=90)
+    delivery_lng: Optional[float] = Field(None, ge=-180, le=180)
+    items: List[CartItem] = Field(..., min_length=1, max_length=30)
+    total_amount: float = Field(..., ge=0, le=200000)
+    notes: Optional[str] = Field("", max_length=300)
     apply_first_order_discount: bool = False
-    coupon_code: Optional[str] = None
+    coupon_code: Optional[str] = Field(None, max_length=40)
 
 
 class CouponValidateIn(BaseModel):
-    code: str
-    phone: Optional[str] = None
-    items_total: float
+    code: str = Field(..., min_length=2, max_length=40)
+    phone: Optional[str] = Field(None, max_length=15)
+    items_total: float = Field(..., ge=0, le=200000)
 
 
 class VerifyPaymentIn(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
-    local_order_id: str  # client-generated uuid to tie front/back
+    razorpay_order_id: str = Field(..., max_length=80)
+    razorpay_payment_id: str = Field(..., max_length=80)
+    razorpay_signature: str = Field(..., max_length=200)
+    local_order_id: str = Field(..., max_length=80)
 
 
 class RiderLoginIn(BaseModel):
-    passcode: str
+    passcode: str = Field(..., min_length=1, max_length=20)
 
 
 class ReviewIn(BaseModel):
-    name: str
-    phone: Optional[str] = None
-    rating: int  # 1..5
-    comment: str
-    order_id: Optional[str] = None
+    name: str = Field(..., min_length=2, max_length=80)
+    phone: Optional[str] = Field(None, max_length=15)
+    rating: int = Field(..., ge=1, le=5)
+    comment: str = Field(..., min_length=4, max_length=600)
+    order_id: Optional[str] = Field(None, max_length=80)
 
 
 class OrderStatusIn(BaseModel):
-    payment_status: str  # 'paid', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'
+    payment_status: str = Field(..., max_length=30)
+
+    @field_validator("payment_status")
+    @classmethod
+    def _allowed(cls, v: str) -> str:
+        allowed = {"paid", "preparing", "ready", "out_for_delivery", "delivered",
+                   "cancelled", "cod_pending"}
+        if v not in allowed:
+            raise ValueError(f"Invalid status. Must be one of: {sorted(allowed)}")
+        return v
 
 
 # Simple in-memory order draft store (order_id -> draft)
@@ -334,9 +415,10 @@ async def get_products():
 
 # ----------------------- Customer profile (saved address) -----------------------
 @api_router.get("/public/first-order-eligible/{phone}")
-async def check_first_order_eligible(phone: str):
+async def check_first_order_eligible(phone: str, request: Request):
     """Lightweight check for the checkout dialog — returns whether this phone
     is eligible for the first-order discount."""
+    rate_limit(request, "profile_lookup")
     phone = (phone or "").strip()
     if len(phone) < 10:
         return {"eligible": False, "discount_pct": FIRST_ORDER_DISCOUNT_PCT}
@@ -345,7 +427,7 @@ async def check_first_order_eligible(phone: str):
 
 
 @api_router.get("/public/customer-profile/{phone}")
-async def get_customer_profile(phone: str):
+async def get_customer_profile(phone: str, request: Request):
     """Look up the most-recent saved name + address + location for a phone
     number. Returns 404 if no profile exists yet."""
     phone = (phone or "").strip()
@@ -380,21 +462,28 @@ async def list_public_reviews():
 
 
 @api_router.post("/reviews")
-async def create_review(body: ReviewIn):
+async def create_review(body: ReviewIn, request: Request):
     """Public review submission. Always inserted as is_approved=false so the
     admin can moderate before it appears on the site."""
+    rate_limit(request, "review")
     if body.rating < 1 or body.rating > 5:
         raise HTTPException(400, "Rating must be 1–5")
-    name = (body.name or "").strip()
-    comment = (body.comment or "").strip()
+    name = sanitize_text(body.name or "", 80)
+    comment = sanitize_text(body.comment or "", 600)
     if len(name) < 2 or len(comment) < 4:
         raise HTTPException(400, "Name and comment too short")
+    phone = None
+    if body.phone:
+        try:
+            phone = validate_indian_phone(body.phone)
+        except HTTPException:
+            phone = None  # phone is optional on reviews; ignore bad ones
     try:
         sb.table("reviews").insert({
-            "name": name[:80],
-            "phone": (body.phone or None),
+            "name": name,
+            "phone": phone,
             "rating": body.rating,
-            "comment": comment[:600],
+            "comment": comment,
             "is_approved": False,
             "order_id": body.order_id or None,
         }).execute()
@@ -406,10 +495,11 @@ async def create_review(body: ReviewIn):
 
 # ----------------------- Coupons -----------------------
 @api_router.post("/coupons/validate")
-async def validate_coupon(body: CouponValidateIn):
+async def validate_coupon(body: CouponValidateIn, request: Request):
     """Live validation called from the checkout dialog. Returns the discount
     amount or a friendly error message. Does NOT redeem the coupon — that
     only happens when the order is placed."""
+    rate_limit(request, "coupon_validate")
     if body.items_total <= 0:
         return {"valid": False, "discount": 0, "error": "Cart is empty"}
     result = _compute_coupon_discount(body.code, body.phone, body.items_total)
@@ -422,8 +512,13 @@ async def validate_coupon(body: CouponValidateIn):
 
 # ----------------------- Razorpay payment -----------------------
 @api_router.post("/payments/create-order")
-async def create_payment_order(payload: CreateOrderIn):
+async def create_payment_order(payload: CreateOrderIn, request: Request):
     """Create a Razorpay order and remember the draft locally until verify."""
+    payload.customer_phone = validate_indian_phone(payload.customer_phone)
+    payload.customer_name = sanitize_text(payload.customer_name, 80)
+    payload.customer_address = sanitize_text(payload.customer_address or "", 400)
+    payload.notes = sanitize_text(payload.notes or "", 300)
+    rate_limit(request, "order", extra_key=payload.customer_phone)
     if not payload.items:
         raise HTTPException(400, "Empty cart")
     # Server is the source of truth for total — re-compute from items, apply
@@ -527,8 +622,13 @@ async def verify_payment(body: VerifyPaymentIn):
 
 
 @api_router.post("/orders/cod")
-async def create_cod_order(payload: CreateOrderIn):
+async def create_cod_order(payload: CreateOrderIn, request: Request):
     """Cash-on-delivery: insert the order directly with payment_status='cod_pending'."""
+    payload.customer_phone = validate_indian_phone(payload.customer_phone)
+    payload.customer_name = sanitize_text(payload.customer_name, 80)
+    payload.customer_address = sanitize_text(payload.customer_address or "", 400)
+    payload.notes = sanitize_text(payload.notes or "", 300)
+    rate_limit(request, "order", extra_key=payload.customer_phone)
     if not payload.items:
         raise HTTPException(400, "Empty cart")
     final_total, first_order_applied, coupon_used, note_suffix = resolve_order_total(payload)
@@ -571,7 +671,8 @@ async def create_cod_order(payload: CreateOrderIn):
 
 # ----------------------- Rider -----------------------
 @api_router.post("/rider/login")
-async def rider_login(body: RiderLoginIn):
+async def rider_login(body: RiderLoginIn, request: Request):
+    rate_limit(request, "rider_login")
     try:
         res = sb.table("shop_settings").select("rider_passcode").limit(1).execute()
         if not res.data:
@@ -618,9 +719,20 @@ class SeedIn(BaseModel):
 
 
 @api_router.post("/admin/seed")
-async def seed_admin(body: SeedIn):
+async def seed_admin(body: SeedIn, request: Request):
     if body.secret != JWT_SECRET:
         raise HTTPException(403, "Forbidden")
+    rate_limit(request, "rider_login")  # reuse the strict rider-login bucket
+    # Guard: refuse to run if an admin already exists. This neutralizes the
+    # endpoint after first use so a leaked JWT_SECRET can't create new admins.
+    try:
+        existing = sb.table("user_roles").select("user_id").eq("role", "admin").limit(1).execute()
+        if existing.data:
+            raise HTTPException(409, "Admin already provisioned. Seed disabled.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning("admin existence check failed: %s", e)
     try:
         # 1. Create or find user
         user_id = None
@@ -719,12 +831,27 @@ async def upload_product_image(
 # ----------------------- Wire up -----------------------
 app.include_router(api_router)
 
+# Tightened CORS: only the production domain + Vercel preview URLs +
+# Capacitor native app + local dev. Anything else is rejected.
+# Override via CORS_ORIGINS env var (comma-separated) for new deployments.
+_default_origins = [
+    "https://karthikachickencentre.shop",
+    "https://www.karthikachickencentre.shop",
+    "capacitor://localhost",        # Android/iOS native app
+    "http://localhost:3000",        # local dev
+    "http://localhost:8081",        # local dev (alt port)
+]
+_env_origins = [o.strip() for o in (os.environ.get("CORS_ORIGINS") or "").split(",") if o.strip()]
+ALLOWED_ORIGINS = _env_origins or _default_origins
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    # Also allow any *.vercel.app preview deploy and any *.preview.emergentagent.com
+    allow_origin_regex=r"https://[a-z0-9-]+\.(vercel\.app|preview\.emergentagent\.com)$",
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
 
 logging.basicConfig(
