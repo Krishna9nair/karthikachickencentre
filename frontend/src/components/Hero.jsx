@@ -61,25 +61,24 @@ const Hero = () => {
           </div>
         </div>
 
-        <div className="relative max-w-xs sm:max-w-sm md:max-w-none mx-auto md:mx-0 w-full">
+        <div className="relative max-w-xs sm:max-w-sm md:max-w-none mx-auto md:mx-0 w-full hidden md:block">
           <div className="absolute -inset-6 bg-gradient-to-br from-[#F5D4C0]/40 via-[#FAF4EC] to-[#FAF4EC] rounded-3xl blur-2xl" />
           <div className="relative rounded-2xl bg-[#FFF8EE] border-2 border-[#C47B4A] shadow-lg overflow-hidden">
             <div className="m-2 md:m-3 border-[1.5px] border-[#C47B4A] rounded-xl p-3 md:p-4 relative">
               {/*
-                LCP element. Locally hosted WebP at 3 widths.
-                Reserved aspect ratio (3/4 portrait) prevents CLS.
-                Preload hint lives in index.html.
+                Decorative hero image. Below the fold on mobile (hidden via
+                `hidden md:block`), so we lazy-load it. On desktop it shows
+                in the right column but is not the LCP element.
               */}
               <img
-                src="/hero-rooster-480.webp"
-                srcSet="/hero-rooster-320.webp 320w, /hero-rooster-480.webp 480w, /hero-rooster-800.webp 800w"
-                sizes="(max-width: 768px) 90vw, 40vw"
+                src="/hero-rooster-800.webp"
+                srcSet="/hero-rooster-480.webp 480w, /hero-rooster-800.webp 800w"
+                sizes="(max-width: 1024px) 50vw, 40vw"
                 alt="Fresh farm rooster illustration"
                 width="800"
                 height="1067"
-                loading="eager"
+                loading="lazy"
                 decoding="async"
-                fetchpriority="high"
                 className="w-full h-auto object-contain max-h-[260px] sm:max-h-[320px] md:max-h-none"
                 style={{ aspectRatio: '3 / 4' }}
               />
