@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
 import Bill from './Bill';
+import DeliverySlotPicker from './DeliverySlotPicker';
 
 const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
 const FIRST_ORDER_DISCOUNT_PCT = 10;
@@ -27,6 +28,7 @@ const CheckoutDialog = ({ open, onClose }) => {
   const [coupon, setCoupon] = useState(null); // { code, discount } when applied
   const [couponError, setCouponError] = useState('');
   const [couponChecking, setCouponChecking] = useState(false);
+  const [deliverySlot, setDeliverySlot] = useState(null); // { date, start, end, label }
   // Snapshot the cart at order placement so the Bill is stable even after
   // the parent cart state is cleared (or items change).
   const [orderSnapshot, setOrderSnapshot] = useState(null);
@@ -274,6 +276,13 @@ const CheckoutDialog = ({ open, onClose }) => {
       });
       return;
     }
+    if (!deliverySlot) {
+      toast({
+        title: 'Pick a delivery slot',
+        description: 'Choose when you want your meat delivered.',
+      });
+      return;
+    }
 
     setStep('paying');
 
@@ -292,6 +301,10 @@ const CheckoutDialog = ({ open, onClose }) => {
       total_amount: finalTotal,
       apply_first_order_discount: firstOrderEligible,
       coupon_code: useCoupon ? coupon.code : null,
+      delivery_slot_date: deliverySlot.date,
+      delivery_slot_start: deliverySlot.start,
+      delivery_slot_end: deliverySlot.end,
+      delivery_slot_label: deliverySlot.label,
       notes: '',
     };
 
@@ -309,6 +322,7 @@ const CheckoutDialog = ({ open, onClose }) => {
       discount,
       firstOrderDiscountApplied: firstOrderEligible && !useCoupon,
       couponCode: useCoupon ? coupon.code : null,
+      deliverySlot,
       customer: { name: form.name, phone: form.phone, address: form.address },
     };
 
@@ -427,6 +441,7 @@ const CheckoutDialog = ({ open, onClose }) => {
     setCouponInput('');
     setCouponError('');
     setCouponOpen(false);
+    setDeliverySlot(null);
     onClose();
     setIsOpen(false);
   };
@@ -542,6 +557,8 @@ const CheckoutDialog = ({ open, onClose }) => {
                 </div>
               )}
             </div>
+
+            <DeliverySlotPicker value={deliverySlot} onChange={setDeliverySlot} />
 
             {firstOrderEligible && !useCoupon && (
               <div
@@ -753,6 +770,7 @@ const CheckoutDialog = ({ open, onClose }) => {
             discount={orderSnapshot.discount}
             firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
             couponCode={orderSnapshot.couponCode}
+            deliverySlot={orderSnapshot.deliverySlot}
             onDone={handleDone}
           />
         )}

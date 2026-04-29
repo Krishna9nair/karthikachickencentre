@@ -109,6 +109,41 @@ def sanitize_text(value: str, max_len: int) -> str:
     return cleaned[:max_len]
 
 
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIME_RE = re.compile(r"^\d{2}:\d{2}$")
+ALLOWED_SLOT_STARTS = {"09:00", "11:00", "13:00", "15:00", "17:00", "19:00"}
+
+
+def slot_fields(payload: "CreateOrderIn") -> Dict[str, Any]:
+    """Validate the optional delivery slot fields and return a partial dict
+    suitable for spreading into an `orders` insert. Returns an empty dict if
+    no slot was provided. Raises 400 if shape is invalid."""
+    if not (payload.delivery_slot_date or payload.delivery_slot_start):
+        return {}
+    if not (
+        payload.delivery_slot_date
+        and payload.delivery_slot_start
+        and payload.delivery_slot_end
+        and payload.delivery_slot_label
+    ):
+        raise HTTPException(400, "Incomplete delivery slot")
+    if not _DATE_RE.match(payload.delivery_slot_date):
+        raise HTTPException(400, "Invalid slot date")
+    if not (
+        _TIME_RE.match(payload.delivery_slot_start)
+        and _TIME_RE.match(payload.delivery_slot_end)
+    ):
+        raise HTTPException(400, "Invalid slot time")
+    if payload.delivery_slot_start not in ALLOWED_SLOT_STARTS:
+        raise HTTPException(400, "Slot not allowed")
+    return {
+        "delivery_slot_date": payload.delivery_slot_date,
+        "delivery_slot_start": payload.delivery_slot_start,
+        "delivery_slot_end": payload.delivery_slot_end,
+        "delivery_slot_label": sanitize_text(payload.delivery_slot_label, 60),
+    }
+
+
 # ----------------------- Models -----------------------
 class CartItem(BaseModel):
     product_id: str = Field(..., max_length=80)
@@ -128,6 +163,10 @@ class CreateOrderIn(BaseModel):
     notes: Optional[str] = Field("", max_length=300)
     apply_first_order_discount: bool = False
     coupon_code: Optional[str] = Field(None, max_length=40)
+    delivery_slot_date: Optional[str] = Field(None, max_length=10)   # 'YYYY-MM-DD'
+    delivery_slot_start: Optional[str] = Field(None, max_length=5)   # 'HH:MM'
+    delivery_slot_end: Optional[str] = Field(None, max_length=5)
+    delivery_slot_label: Optional[str] = Field(None, max_length=60)
 
 
 class CouponValidateIn(BaseModel):
@@ -601,6 +640,11 @@ async def verify_payment(body: VerifyPaymentIn):
             "delivery_lat": draft.get("delivery_lat"),
             "delivery_lng": draft.get("delivery_lng"),
         }
+        # Carry forward optional delivery slot fields from the draft
+        for k in ("delivery_slot_date", "delivery_slot_start",
+                  "delivery_slot_end", "delivery_slot_label"):
+            if draft.get(k):
+                insert_payload[k] = draft[k]
         res = sb.table("orders").insert(insert_payload).execute()
         order_row = res.data[0] if res.data else None
         # Clean up draft
@@ -646,6 +690,7 @@ async def create_cod_order(payload: CreateOrderIn, request: Request):
             "notes": (payload.notes or "") + note_suffix or None,
             "delivery_lat": payload.delivery_lat,
             "delivery_lng": payload.delivery_lng,
+            **slot_fields(payload),
         }
         res = sb.table("orders").insert(insert_payload).execute()
         order_row = res.data[0] if res.data else None

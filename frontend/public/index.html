@@ -175,8 +175,34 @@
         <script>
           // Register service worker AFTER first interaction or 3s idle —
           // never compete with LCP / hydration for main thread time.
+          //
+          // Auto-update strategy: when a new SW is found (new deploy), force
+          // it to activate immediately and reload the page so users always
+          // see the latest build. This eliminates the "stuck on old build"
+          // problem after a Vercel deploy.
           if ('serviceWorker' in navigator) {
-            const reg = () => navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+            const reg = async () => {
+              try {
+                const r = await navigator.serviceWorker.register('/service-worker.js');
+                // Check for updates every time the tab regains focus
+                window.addEventListener('focus', () => r.update().catch(() => {}));
+                r.addEventListener('updatefound', () => {
+                  const nw = r.installing;
+                  if (!nw) return;
+                  nw.addEventListener('statechange', () => {
+                    if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                      nw.postMessage('SKIP_WAITING');
+                    }
+                  });
+                });
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                  if (refreshing) return;
+                  refreshing = true;
+                  window.location.reload();
+                });
+              } catch (e) {}
+            };
             if ('requestIdleCallback' in window) {
               requestIdleCallback(reg, { timeout: 3000 });
             } else {

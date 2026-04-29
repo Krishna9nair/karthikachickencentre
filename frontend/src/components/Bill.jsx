@@ -9,7 +9,7 @@ const ADMIN_WHATSAPP = '919619417452';
 
 // Build a richly-formatted WhatsApp message with order details.
 // Uses WhatsApp's *bold*, _italic_ markdown so it renders nicely in chat.
-const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod }) => {
+const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod, deliverySlot }) => {
   const orderId = order?.id ? order.id.slice(0, 8).toUpperCase() : '—';
   const lines = items
     .map(
@@ -19,11 +19,14 @@ const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod }) 
     .join('\n');
   const payLabel =
     paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online (UPI / Card)';
+  const slotLine = deliverySlot
+    ? `\n*Deliver:* ${formatSlotDate(deliverySlot.date)}, ${deliverySlot.label}\n`
+    : '';
   return `🐔 *NEW ORDER — ChickenCrew*
 
 *Order ID:* ${orderId}
 *Date:* ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-
+${slotLine}
 *Customer:* ${customer.name}
 *Phone:* ${customer.phone}
 *Address:* ${customer.address}
@@ -37,6 +40,18 @@ ${lines}
 — sent from karthikachickencentre.shop`;
 };
 
+// "2026-04-29" → "Today" / "Tomorrow" / "Wed, 30 Apr"
+const formatSlotDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+
 const Bill = ({
   order,
   items,
@@ -48,6 +63,7 @@ const Bill = ({
   discount = 0,
   firstOrderDiscountApplied = false,
   couponCode = null,
+  deliverySlot = null,
 }) => {
   const billRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -66,6 +82,7 @@ const Bill = ({
     subtotal,
     customer,
     paymentMethod,
+    deliverySlot,
   });
   const waAdminLink = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(adminMsg)}`;
 
@@ -121,6 +138,7 @@ const Bill = ({
             <div class="meta">${escapeHtml(customer.phone)}</div>
             <div class="meta">${escapeHtml(customer.address)}</div>
           </div>
+          ${deliverySlot ? `<div class="cust" style="margin-top:6px"><div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Deliver</div><div class="name">${escapeHtml(formatSlotDate(deliverySlot.date))} · ${escapeHtml(deliverySlot.label)}</div></div>` : ''}
           <table>
             <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
             <tbody>${itemsHtml}</tbody>
@@ -209,6 +227,17 @@ const Bill = ({
         </div>
 
         <div className="mt-4 border-t border-dashed border-[#EADFCF] pt-3">
+          {deliverySlot && (
+            <div
+              className="mb-3 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 flex items-start gap-2"
+              data-testid="bill-delivery-slot"
+            >
+              <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Deliver</div>
+              <div className="text-xs font-semibold text-[#2A1A14]">
+                {formatSlotDate(deliverySlot.date)} · {deliverySlot.label}
+              </div>
+            </div>
+          )}
           <table className="w-full text-xs" data-testid="bill-items-table">
             <thead className="text-[10px] uppercase tracking-wider text-[#7B5A48]">
               <tr>

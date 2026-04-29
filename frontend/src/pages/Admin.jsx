@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
   ClipboardList, Package, TrendingUp, ImageIcon, Loader2, Store,
-  Star, MessageSquare, CheckCircle2, Tag,
+  Star, MessageSquare, CheckCircle2, Tag, Clock,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -54,6 +54,7 @@ const Admin = () => {
     min_order_amount: '',
     valid_until: '',
   });
+  const [disabledSlots, setDisabledSlots] = useState([]);
 
   useEffect(() => {
     if (session && isAdmin) loadAll();
@@ -61,7 +62,38 @@ const Admin = () => {
   }, [session, isAdmin]);
 
   const loadAll = async () => {
-    await Promise.all([loadProducts(), loadOrders(), loadShop(), loadReviews(), loadCoupons()]);
+    await Promise.all([
+      loadProducts(), loadOrders(), loadShop(), loadReviews(),
+      loadCoupons(), loadDisabledSlots(),
+    ]);
+  };
+
+  const loadDisabledSlots = async () => {
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from('disabled_slots')
+      .select('*')
+      .gte('slot_date', todayIso)
+      .order('slot_date', { ascending: true });
+    setDisabledSlots(data || []);
+  };
+
+  const toggleSlotDisabled = async (slotDate, slotStart, currentlyDisabled) => {
+    if (currentlyDisabled) {
+      const { error } = await supabase
+        .from('disabled_slots')
+        .delete()
+        .eq('slot_date', slotDate)
+        .eq('slot_start', slotStart);
+      if (error) toast({ title: 'Failed', description: error.message });
+    } else {
+      const { error } = await supabase
+        .from('disabled_slots')
+        .insert({ slot_date: slotDate, slot_start: slotStart, reason: 'Closed by admin' });
+      if (error) toast({ title: 'Failed', description: error.message });
+    }
+    loadDisabledSlots();
   };
 
   const loadCoupons = async () => {
@@ -641,6 +673,12 @@ const Admin = () => {
                     ))}
                   </div>
                   {o.customer_address && <div className="text-xs text-[#7B5A48] mt-1">📍 {o.customer_address}</div>}
+                  {o.delivery_slot_label && (
+                    <div className="text-xs text-[#B93826] font-semibold mt-1 inline-flex items-center gap-1 bg-[#FFF7DA] border border-[#F0DC8A] px-2 py-0.5 rounded-full">
+                      <Clock className="w-3 h-3" />
+                      {o.delivery_slot_date} · {o.delivery_slot_label}
+                    </div>
+                  )}
                   {o.delivery_lat && o.delivery_lng && (
                     <a
                       href={`https://maps.google.com/?q=${o.delivery_lat},${o.delivery_lng}`}
@@ -929,6 +967,68 @@ const Admin = () => {
               })}
             </ul>
           )}
+        </div>
+
+        {/* Delivery slot management — admin can disable specific slots */}
+        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-slots-panel">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
+              <Clock className="w-5 h-5 text-[#B93826]" />
+            </div>
+            <div>
+              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Delivery Slots</h3>
+              <p className="text-xs text-[#7B5A48] mt-1">
+                Tap a slot to block it for that day (e.g. you're closed, or out of stock).
+              </p>
+            </div>
+          </div>
+
+          {[0, 1].map((dayOffset) => {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + dayOffset);
+            const dateIso = d.toISOString().slice(0, 10);
+            const slots = [
+              { start: '09:00', label: '9–11 AM' },
+              { start: '11:00', label: '11 AM–1 PM' },
+              { start: '13:00', label: '1–3 PM' },
+              { start: '15:00', label: '3–5 PM' },
+              { start: '17:00', label: '5–7 PM' },
+              { start: '19:00', label: '7–9 PM' },
+            ];
+            return (
+              <div key={dateIso} className="mb-3">
+                <div className="text-xs font-semibold text-[#7B5A48] uppercase tracking-wider mb-2">
+                  {dayOffset === 0 ? 'Today' : 'Tomorrow'} · {d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {slots.map((s) => {
+                    const isDisabled = disabledSlots.some(
+                      (ds) => ds.slot_date === dateIso && (ds.slot_start || '').slice(0, 5) === s.start
+                    );
+                    return (
+                      <button
+                        key={s.start}
+                        onClick={() => toggleSlotDisabled(dateIso, s.start, isDisabled)}
+                        data-testid={`admin-slot-${dateIso}-${s.start}`}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                          isDisabled
+                            ? 'bg-[#FCEEEE] text-[#B93826] border-[#B93826] line-through'
+                            : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/40'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-[#7B5A48] mt-3">
+            <span className="inline-block px-2 py-0.5 bg-[#FCEEEE] text-[#B93826] rounded mr-1">Red</span> = blocked from customers ·
+            <span className="inline-block px-2 py-0.5 bg-white border border-[#EADFCF] rounded ml-2">White</span> = open
+          </p>
         </div>
       </section>
 
