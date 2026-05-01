@@ -9,7 +9,7 @@ const ADMIN_WHATSAPP = '919619417452';
 
 // Build a richly-formatted WhatsApp message with order details.
 // Uses WhatsApp's *bold*, _italic_ markdown so it renders nicely in chat.
-const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod, deliverySlot }) => {
+const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod, deliverySlot, deliveryFee = 0 }) => {
   const orderId = order?.id ? order.id.slice(0, 8).toUpperCase() : '—';
   const lines = items
     .map(
@@ -22,6 +22,9 @@ const buildAdminMessage = ({ order, items, subtotal, customer, paymentMethod, de
   const slotLine = deliverySlot
     ? `\n*Deliver:* ${formatSlotDate(deliverySlot.date)}, ${deliverySlot.label}\n`
     : '';
+  const feeLine = deliveryFee > 0
+    ? `*Delivery fee:* ₹${Number(deliveryFee).toFixed(0)}\n`
+    : `*Delivery:* FREE\n`;
   return `🐔 *NEW ORDER — ChickenCrew*
 
 *Order ID:* ${orderId}
@@ -34,7 +37,7 @@ ${slotLine}
 *Items:*
 ${lines}
 
-*Total: ₹${subtotal.toFixed(0)}*
+${feeLine}*Total: ₹${subtotal.toFixed(0)}*
 *Payment:* ${payLabel}
 
 — sent from karthikachickencentre.shop`;
@@ -64,6 +67,7 @@ const Bill = ({
   firstOrderDiscountApplied = false,
   couponCode = null,
   deliverySlot = null,
+  deliveryFee = 0,
 }) => {
   const billRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -83,6 +87,7 @@ const Bill = ({
     customer,
     paymentMethod,
     deliverySlot,
+    deliveryFee,
   });
   const waAdminLink = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(adminMsg)}`;
 
@@ -144,7 +149,12 @@ const Bill = ({
             <tbody>${itemsHtml}</tbody>
           </table>
           <div class="total">
-            <div class="pay"><div class="label">Payment</div><div>${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}</div></div>
+            <div class="pay">
+              <div class="label">Payment</div>
+              <div>${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}</div>
+              <div class="label" style="margin-top:4px">Delivery fee</div>
+              <div>${deliveryFee > 0 ? `+ ₹${Number(deliveryFee).toFixed(0)}` : 'FREE'}</div>
+            </div>
             <div><div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em;text-align:right">Total</div><div class="amount">₹${subtotal.toFixed(0)}</div></div>
           </div>
           <div class="thanks">Thank you — your order will be ready before you reach the shop.</div>
@@ -289,6 +299,12 @@ const Bill = ({
                 {grossSubtotal ? ` (was ₹${Number(grossSubtotal).toFixed(0)})` : ''}
               </div>
             )}
+            <div
+              className="text-[10px] text-[#7B5A48] mt-1"
+              data-testid="bill-delivery-fee-line"
+            >
+              Delivery fee: {deliveryFee > 0 ? `+ ₹${Number(deliveryFee).toFixed(0)}` : <b className="text-emerald-700">FREE</b>}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Total</div>

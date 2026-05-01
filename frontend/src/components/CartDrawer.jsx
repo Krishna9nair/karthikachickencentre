@@ -131,6 +131,23 @@ const CartDrawer = () => {
 
         {items.length > 0 && (
           <div className="border-t border-[#EADFCF] px-5 py-4 bg-[#F3EADB]">
+            {/* Free delivery progress hint — encourages upselling */}
+            {subtotal < 299 && (
+              <div
+                className="mb-3 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 text-[11px] text-[#5C3A14]"
+                data-testid="cart-free-delivery-hint"
+              >
+                Add <b>₹{Math.max(0, 299 - subtotal).toFixed(0)} more</b> for <b>FREE delivery</b> · otherwise ₹20 fee applies
+              </div>
+            )}
+            {subtotal >= 299 && (
+              <div
+                className="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] text-emerald-800 font-semibold flex items-center gap-1"
+                data-testid="cart-free-delivery-active"
+              >
+                ✓ FREE delivery on this order
+              </div>
+            )}
             {isSunday && (
               <button
                 type="button"

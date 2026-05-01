@@ -10,6 +10,8 @@ import DeliverySlotPicker from './DeliverySlotPicker';
 
 const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
 const FIRST_ORDER_DISCOUNT_PCT = 10;
+const FREE_DELIVERY_THRESHOLD = 299;
+const DELIVERY_FEE = 20;
 
 const CheckoutDialog = ({ open, onClose }) => {
   const { items, subtotal, clear, setIsOpen } = useCart();
@@ -42,7 +44,11 @@ const CheckoutDialog = ({ open, onClose }) => {
   const couponDiscount = coupon?.discount || 0;
   const useCoupon = couponDiscount > firstOrderDiscount;
   const discount = useCoupon ? couponDiscount : firstOrderDiscount;
-  const finalTotal = +Math.max(subtotal - discount, 0).toFixed(2);
+  // Delivery fee is based on the GROSS subtotal (before discount). Above
+  // the threshold = free; below = ₹20. Mirrors the backend rule exactly.
+  const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const amountToFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
+  const finalTotal = +Math.max(subtotal - discount + deliveryFee, 0).toFixed(2);
 
   // On open, hydrate the form from the most-recent localStorage profile so
   // returning customers don't have to retype anything.
@@ -320,6 +326,7 @@ const CheckoutDialog = ({ open, onClose }) => {
       subtotal: finalTotal,
       grossSubtotal: subtotal,
       discount,
+      deliveryFee,
       firstOrderDiscountApplied: firstOrderEligible && !useCoupon,
       couponCode: useCoupon ? coupon.code : null,
       deliverySlot,
@@ -687,6 +694,28 @@ const CheckoutDialog = ({ open, onClose }) => {
                   </div>
                 </>
               )}
+              {/* Delivery fee line — always shown so customers know the policy */}
+              <div
+                className={`flex justify-between text-sm ${
+                  discount > 0 ? '' : 'border-t border-[#EADFCF] mt-2 pt-2'
+                }`}
+                data-testid="delivery-fee-line"
+              >
+                <span className="text-[#3B2416]">Delivery fee</span>
+                {deliveryFee === 0 ? (
+                  <span className="text-emerald-700 font-semibold">FREE</span>
+                ) : (
+                  <span className="text-[#3B2416]">+ ₹{deliveryFee}</span>
+                )}
+              </div>
+              {amountToFreeDelivery > 0 && (
+                <div
+                  className="mt-2 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 text-[11px] text-[#5C3A14]"
+                  data-testid="free-delivery-hint"
+                >
+                  Add <b>₹{amountToFreeDelivery.toFixed(0)} more</b> to your cart and delivery becomes <b>FREE</b>.
+                </div>
+              )}
               <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between font-semibold text-[#2A1A14]">
                 <span>Total</span>
                 <span data-testid="checkout-final-total">₹{finalTotal.toFixed(0)}</span>
@@ -771,6 +800,7 @@ const CheckoutDialog = ({ open, onClose }) => {
             firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
             couponCode={orderSnapshot.couponCode}
             deliverySlot={orderSnapshot.deliverySlot}
+            deliveryFee={orderSnapshot.deliveryFee}
             onDone={handleDone}
           />
         )}

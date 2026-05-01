@@ -302,6 +302,12 @@ def upsert_customer_profile(name: str, phone: str, address: Optional[str],
 # ----------------------- First-order discount -----------------------
 FIRST_ORDER_DISCOUNT_PCT = 10  # %
 
+# Delivery fee policy: orders below FREE_DELIVERY_THRESHOLD pay DELIVERY_FEE.
+# Threshold is measured against the items subtotal BEFORE any discount, so
+# customers don't unexpectedly cross back below the threshold after a coupon.
+FREE_DELIVERY_THRESHOLD = 299
+DELIVERY_FEE = 20
+
 
 def is_first_time_customer(phone: str) -> bool:
     """Returns True if the phone has never placed a saved order before."""
@@ -374,10 +380,12 @@ def _compute_coupon_discount(code: str, phone: Optional[str], items_total: float
     return {"valid": True, "discount": disc, "error": None, "coupon": c}
 
 
-def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, Optional[str], str]:
+def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, Optional[str], float, str]:
     """Server-side source of truth for the order total. Considers BOTH the
     first-order 10% discount and any provided coupon — applies the bigger one.
-    Returns (final_total, first_order_applied, coupon_code_applied, notes_suffix)."""
+    Then adds the delivery fee if items_total < FREE_DELIVERY_THRESHOLD.
+    Returns (final_total, first_order_applied, coupon_code_applied,
+            delivery_fee, notes_suffix)."""
     items_sum = sum((i.price or 0) * (i.qty or 0) for i in payload.items)
     items_sum = round(items_sum, 2)
 
@@ -399,16 +407,21 @@ def resolve_order_total(payload: "CreateOrderIn") -> tuple[float, bool, Optional
             coupon_disc = result["discount"]
             coupon_code_used = (payload.coupon_code or "").strip().upper()
 
+    # Delivery fee — based on the gross items subtotal so a coupon can never
+    # accidentally re-trigger the fee.
+    delivery_fee = 0.0 if items_sum >= FREE_DELIVERY_THRESHOLD else float(DELIVERY_FEE)
+    fee_suffix = "" if delivery_fee == 0 else f" [Delivery fee +₹{int(delivery_fee)}]"
+
     # Whichever discount is bigger wins (they don't stack)
     if coupon_disc >= first_disc and coupon_disc > 0:
-        final_total = round(items_sum - coupon_disc, 2)
-        suffix = f" [Coupon {coupon_code_used} applied: -₹{coupon_disc:.0f}]"
-        return final_total, False, coupon_code_used, suffix
+        final_total = round(items_sum - coupon_disc + delivery_fee, 2)
+        suffix = f" [Coupon {coupon_code_used} applied: -₹{coupon_disc:.0f}]" + fee_suffix
+        return final_total, False, coupon_code_used, delivery_fee, suffix
     if first_disc > 0:
-        final_total = round(items_sum - first_disc, 2)
-        suffix = f" [First-order {FIRST_ORDER_DISCOUNT_PCT}% off applied]"
-        return final_total, True, None, suffix
-    return items_sum, False, None, ""
+        final_total = round(items_sum - first_disc + delivery_fee, 2)
+        suffix = f" [First-order {FIRST_ORDER_DISCOUNT_PCT}% off applied]" + fee_suffix
+        return final_total, True, None, delivery_fee, suffix
+    return round(items_sum + delivery_fee, 2), False, None, delivery_fee, fee_suffix.lstrip()
 
 
 def record_coupon_use(code: str, phone: str, order_id: Optional[str]) -> None:
@@ -819,7 +832,7 @@ async def create_payment_order(payload: CreateOrderIn, request: Request):
         raise HTTPException(400, "Empty cart")
     # Server is the source of truth for total — re-compute from items, apply
     # the bigger of (first-order discount, coupon discount) only if eligible.
-    final_total, first_order_applied, coupon_used, note_suffix = resolve_order_total(payload)
+    final_total, first_order_applied, coupon_used, delivery_fee, note_suffix = resolve_order_total(payload)
     if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
@@ -839,6 +852,7 @@ async def create_payment_order(payload: CreateOrderIn, request: Request):
         draft["notes"] = (draft.get("notes") or "") + note_suffix
         draft["_first_order_applied"] = first_order_applied
         draft["_coupon_used"] = coupon_used
+        draft["_delivery_fee"] = delivery_fee
         ORDER_DRAFTS[local_id] = {
             "rzp_order_id": rzp_order["id"],
             "draft": draft,
@@ -852,6 +866,7 @@ async def create_payment_order(payload: CreateOrderIn, request: Request):
             "discount_applied": first_order_applied or bool(coupon_used),
             "first_order_applied": first_order_applied,
             "coupon_used": coupon_used,
+            "delivery_fee": delivery_fee,
             "final_total": final_total,
         }
     except Exception as e:
@@ -932,7 +947,7 @@ async def create_cod_order(payload: CreateOrderIn, request: Request):
     rate_limit(request, "order", extra_key=payload.customer_phone)
     if not payload.items:
         raise HTTPException(400, "Empty cart")
-    final_total, first_order_applied, coupon_used, note_suffix = resolve_order_total(payload)
+    final_total, first_order_applied, coupon_used, delivery_fee, note_suffix = resolve_order_total(payload)
     if final_total <= 0:
         raise HTTPException(400, "Empty cart")
     try:
@@ -965,6 +980,7 @@ async def create_cod_order(payload: CreateOrderIn, request: Request):
             "discount_applied": first_order_applied or bool(coupon_used),
             "first_order_applied": first_order_applied,
             "coupon_used": coupon_used,
+            "delivery_fee": delivery_fee,
         }
     except Exception as e:
         logging.exception("cod order failed")
