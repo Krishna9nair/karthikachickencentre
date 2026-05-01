@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import SundayWheelBanner from '../components/SundayWheelBanner';
 
 // Above-the-fold components (Navbar + Hero) load with the main bundle.
 // Below-the-fold sections are code-split so they don't block LCP/FCP.
@@ -21,6 +22,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#FAF4EC]">
       <Navbar />
+      <SundayWheelBanner />
       <Hero />
       <Suspense fallback={<SectionSkeleton height="500px" />}>
         <TodayPrice />

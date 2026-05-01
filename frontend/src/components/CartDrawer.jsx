@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
-import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle } from 'lucide-react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle, PartyPopper } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import CheckoutDialog from './CheckoutDialog';
 import { presetsFor, formatQty, calcSubtotal, normalizeUnit, UNIT_SHORT } from '../lib/units';
 
+const SundayWheel = lazy(() => import('./SundayWheel'));
+
 const WHATSAPP_PHONE = '919619417452';
+
+// IST = UTC+5:30, no DST. Sunday in IST?
+const isSundayIST = () => {
+  const now = new Date();
+  const istMs = now.getTime() + (now.getTimezoneOffset() + 330) * 60000;
+  return new Date(istMs).getDay() === 0;
+};
 
 const CartDrawer = () => {
   const { items, isOpen, setIsOpen, updateQty, removeItem, subtotal } = useCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  const [isSunday, setIsSunday] = useState(false);
+
+  useEffect(() => {
+    setIsSunday(isSundayIST());
+  }, []);
 
   const waOrderLink = (() => {
     if (items.length === 0) return null;
@@ -116,6 +131,17 @@ const CartDrawer = () => {
 
         {items.length > 0 && (
           <div className="border-t border-[#EADFCF] px-5 py-4 bg-[#F3EADB]">
+            {isSunday && (
+              <button
+                type="button"
+                onClick={() => setWheelOpen(true)}
+                data-testid="cart-sunday-wheel-btn"
+                className="w-full mb-3 py-2 rounded-full bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] text-[#5C3A14] text-xs font-bold flex items-center justify-center gap-2 hover:brightness-105"
+              >
+                <PartyPopper className="w-4 h-4 text-[#B93826]" />
+                Sunday Spin: win up to 15% off · TAP TO PLAY
+              </button>
+            )}
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-[#7B5A48]">Subtotal</span>
               <span className="font-serif text-xl font-bold text-[#2A1A14]">
@@ -146,6 +172,11 @@ const CartDrawer = () => {
       </aside>
 
       <CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
+      {wheelOpen && (
+        <Suspense fallback={null}>
+          <SundayWheel open={wheelOpen} onClose={() => setWheelOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 };

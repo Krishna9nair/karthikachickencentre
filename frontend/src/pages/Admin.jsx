@@ -217,6 +217,7 @@ const Admin = () => {
         notice: shopDraft.notice,
         upi_id: shopDraft.upi_id,
         rider_passcode: shopDraft.rider_passcode,
+        sunday_wheel_enabled: shopDraft.sunday_wheel_enabled !== false,
       })
       .eq('id', shopDraft.id)
       .select('id')
@@ -509,6 +510,25 @@ const Admin = () => {
                   onChange={(e) => setShopDraft({ ...shopDraft, rider_passcode: e.target.value })}
                   className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm font-mono"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shopDraft?.sunday_wheel_enabled !== false}
+                    onChange={(e) =>
+                      setShopDraft({ ...shopDraft, sunday_wheel_enabled: e.target.checked })
+                    }
+                    className="w-4 h-4 accent-[#B93826]"
+                    data-testid="shop-sunday-wheel-toggle"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-[#2A1A14]">Sunday Lucky Spin</div>
+                    <div className="text-[11px] text-[#7B5A48]">
+                      Show the spinning wheel to customers every Sunday. Uncheck to pause the promo.
+                    </div>
+                  </div>
+                </label>
               </div>
             </div>
           </div>

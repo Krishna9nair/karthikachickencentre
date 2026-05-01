@@ -270,6 +270,10 @@ class OrderStatusIn(BaseModel):
         return v
 
 
+class WheelSpinIn(BaseModel):
+    phone: str = Field(..., min_length=10, max_length=15)
+
+
 # Simple in-memory order draft store (order_id -> draft)
 ORDER_DRAFTS: Dict[str, dict] = {}
 
@@ -420,6 +424,57 @@ def record_coupon_use(code: str, phone: str, order_id: Optional[str]) -> None:
         }).execute()
     except Exception as e:
         logging.warning("coupon_use insert failed for %s/%s: %s", code, phone, e)
+
+
+# ----------------------- Sunday Spinning Wheel -----------------------
+# Weighted prize wheel. Probabilities sum to 1.0.
+WHEEL_PRIZES = [
+    {"label": "5% off",  "kind": "pct",  "value": 5,  "weight": 0.50},
+    {"label": "10% off", "kind": "pct",  "value": 10, "weight": 0.20},
+    {"label": "15% off", "kind": "pct",  "value": 15, "weight": 0.10},
+    {"label": "Better luck next time", "kind": "none", "value": 0, "weight": 0.10},
+    {"label": "₹50 off", "kind": "flat", "value": 50, "weight": 0.075},
+    {"label": "₹75 off", "kind": "flat", "value": 75, "weight": 0.025},
+]
+
+# IST is UTC+5:30 with no DST, so we compute "is it Sunday in IST?" with a
+# fixed offset rather than pulling in zoneinfo.
+from datetime import timedelta as _td  # noqa: E402
+
+
+def _ist_today() -> Any:
+    """Returns today's date in IST."""
+    now_utc = datetime.now(timezone.utc)
+    return (now_utc + _td(hours=5, minutes=30)).date()
+
+
+def _is_sunday_ist() -> bool:
+    return _ist_today().weekday() == 6  # Mon=0 ... Sun=6
+
+
+def _wheel_pick():
+    """Weighted-random prize selection."""
+    import random
+    r = random.random()
+    cum = 0.0
+    for p in WHEEL_PRIZES:
+        cum += p["weight"]
+        if r <= cum:
+            return p
+    return WHEEL_PRIZES[-1]
+
+
+def _is_wheel_enabled() -> bool:
+    """Reads the admin toggle from shop_settings. Defaults to ON if column
+    is missing (e.g. migration hasn't been run yet — fail-open is fine for
+    a non-critical promo feature)."""
+    try:
+        res = sb.table("shop_settings").select("sunday_wheel_enabled").limit(1).execute()
+        if res.data and res.data[0].get("sunday_wheel_enabled") is False:
+            return False
+    except Exception:
+        pass
+    return True
 
 
 # ----------------------- Auth Helpers -----------------------
@@ -618,6 +673,123 @@ async def create_review(body: ReviewIn, request: Request):
 
 
 # ----------------------- Coupons -----------------------
+@api_router.get("/wheel/status")
+async def wheel_status(phone: Optional[str] = None, request: Request = None):
+    """Returns whether the wheel is spinnable right now for the given phone.
+    Always safe to call — returns a structured "why not" if not eligible."""
+    if request:
+        rate_limit(request, "profile_lookup")
+    if not _is_wheel_enabled():
+        return {"eligible": False, "reason": "disabled", "is_sunday": _is_sunday_ist()}
+    if not _is_sunday_ist():
+        return {"eligible": False, "reason": "not_sunday", "is_sunday": False}
+    if not phone:
+        return {"eligible": True, "reason": None, "is_sunday": True}
+    try:
+        validate_indian_phone(phone)
+    except HTTPException:
+        return {"eligible": False, "reason": "invalid_phone", "is_sunday": True}
+    today_ist = _ist_today().isoformat()
+    try:
+        res = sb.table("wheel_spins").select(
+            "prize_label, prize_kind, prize_value, coupon_code"
+        ).eq("phone", phone).eq("spin_date", today_ist).limit(1).execute()
+        if res.data:
+            return {
+                "eligible": False, "reason": "already_spun",
+                "is_sunday": True, "prize": res.data[0],
+            }
+    except Exception as e:
+        logging.warning("wheel status check failed: %s", e)
+    return {"eligible": True, "reason": None, "is_sunday": True}
+
+
+@api_router.post("/wheel/spin")
+async def wheel_spin(body: WheelSpinIn, request: Request):
+    """Atomically spins the wheel for this phone. Server picks the prize so
+    customers can't fake a win."""
+    rate_limit(request, "review")  # reuse strict bucket — 3/hr is fine for spins
+    phone = validate_indian_phone(body.phone)
+    if not _is_wheel_enabled():
+        raise HTTPException(403, "Wheel is currently disabled")
+    if not _is_sunday_ist():
+        raise HTTPException(403, "Wheel only spins on Sundays")
+    today_ist = _ist_today().isoformat()
+    # Per-phone-per-day enforcement via PK race-safe check
+    try:
+        existing = sb.table("wheel_spins").select(
+            "prize_label, prize_kind, prize_value, coupon_code"
+        ).eq("phone", phone).eq("spin_date", today_ist).limit(1).execute()
+        if existing.data:
+            return {"ok": False, "already_spun": True, "prize": existing.data[0]}
+    except Exception as e:
+        logging.warning("wheel pre-check failed: %s", e)
+
+    prize = _wheel_pick()
+    coupon_code = None
+    if prize["kind"] != "none":
+        # Generate a unique one-time code tied to this phone's last 4 digits
+        suffix = uuid.uuid4().hex[:4].upper()
+        tail = (phone or "")[-4:]
+        coupon_code = f"SUN{tail}{suffix}"
+        # Coupon is valid for 7 days, single use per phone enforced by
+        # coupon_uses table when redeemed.
+        valid_until = (datetime.now(timezone.utc) + _td(days=7)).isoformat()
+        try:
+            sb.table("coupons").insert({
+                "code": coupon_code,
+                "discount_type": prize["kind"],   # 'pct' or 'flat'
+                "discount_value": prize["value"],
+                "min_order_amount": 0,
+                "valid_until": valid_until,
+                "is_active": True,
+            }).execute()
+        except Exception as e:
+            logging.exception("wheel coupon insert failed")
+            raise HTTPException(500, f"Could not generate coupon: {e}")
+
+    # Record the spin (idempotent — PK collision means already spun)
+    try:
+        sb.table("wheel_spins").insert({
+            "phone": phone,
+            "spin_date": today_ist,
+            "prize_label": prize["label"],
+            "prize_kind": prize["kind"],
+            "prize_value": prize["value"],
+            "coupon_code": coupon_code,
+        }).execute()
+    except Exception as e:
+        # If this fails because of PK collision, return the existing prize so
+        # the customer doesn't see a generic error.
+        try:
+            again = sb.table("wheel_spins").select(
+                "prize_label, prize_kind, prize_value, coupon_code"
+            ).eq("phone", phone).eq("spin_date", today_ist).limit(1).execute()
+            if again.data:
+                return {"ok": False, "already_spun": True, "prize": again.data[0]}
+        except Exception:
+            pass
+        logging.exception("wheel spin insert failed")
+        raise HTTPException(500, f"Could not save spin: {e}")
+
+    return {
+        "ok": True,
+        "already_spun": False,
+        "prize": {
+            "label": prize["label"],
+            "kind": prize["kind"],
+            "value": prize["value"],
+            "coupon_code": coupon_code,
+        },
+        # Index of the winning segment so the frontend animation lands on it.
+        "segment_index": next(
+            (i for i, p in enumerate(WHEEL_PRIZES) if p["label"] == prize["label"]),
+            0,
+        ),
+        "segments": [{"label": p["label"]} for p in WHEEL_PRIZES],
+    }
+
+
 @api_router.post("/coupons/validate")
 async def validate_coupon(body: CouponValidateIn, request: Request):
     """Live validation called from the checkout dialog. Returns the discount
