@@ -22,10 +22,11 @@ const Navbar = () => {
     { label: t('nav.shop'), to: '/#shop' },
     { label: t('nav.todays_price'), to: '/#price' },
     { label: t('nav.visit'), to: '/#visit' },
-    {
-      label: isAdmin ? t('nav.admin') : t('nav.admin_login'),
-      to: isAdmin ? '/admin' : '/auth',
-    },
+    // Only show the Admin link if the user is actually an admin. We
+    // deliberately do NOT expose a "Sign in" link to the public nav —
+    // customers don't have accounts, and hiding the route keeps it
+    // obscure from casual visitors. Admins bookmark /auth directly.
+    ...(isAdmin ? [{ label: t('nav.admin'), to: '/admin' }] : []),
     { label: t('nav.rider'), to: '/rider' },
   ];
 

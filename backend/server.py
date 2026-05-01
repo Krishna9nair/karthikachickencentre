@@ -109,6 +109,49 @@ def sanitize_text(value: str, max_len: int) -> str:
     return cleaned[:max_len]
 
 
+def require_admin(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """FastAPI dependency that authorises the caller as an admin.
+
+    Expects `Authorization: Bearer <supabase_access_token>`. Verifies the
+    token with Supabase Auth, then checks the `user_roles` table for a row
+    with role='admin'. Raises 401 if the token is invalid, 403 if the user
+    isn't an admin.
+
+    Use on any privileged endpoint:
+        @api_router.get("/admin/something")
+        async def endpoint(admin = Depends(require_admin)): ...
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Missing bearer token")
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(401, "Missing bearer token")
+    try:
+        user_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        user = user_client.auth.get_user(token)
+        if not user or not user.user:
+            raise HTTPException(401, "Invalid session")
+        user_id = user.user.id
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning("admin token verification failed: %s", e)
+        raise HTTPException(401, "Invalid session")
+    # Role check using the service-role client so RLS can't be spoofed
+    try:
+        roles = sb.table("user_roles").select("role").eq(
+            "user_id", user_id
+        ).eq("role", "admin").limit(1).execute()
+        if not roles.data:
+            raise HTTPException(403, "Not an admin")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning("role lookup failed: %s", e)
+        raise HTTPException(500, "Role check failed")
+    return {"user_id": user_id, "email": user.user.email}
+
+
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 ALLOWED_SLOT_STARTS = {"09:00", "11:00", "13:00", "15:00", "17:00", "19:00"}
@@ -872,6 +915,13 @@ async def seed_admin(body: SeedIn, request: Request):
 
 
 # ----------------------- Admin product image upload -----------------------
+@api_router.get("/admin/me")
+async def admin_me(admin: Dict[str, Any] = Depends(require_admin)):
+    """Backend-verified admin identity. The frontend's RequireAdmin guard
+    calls this on mount so role is never trusted from client state alone."""
+    return {"ok": True, "user_id": admin["user_id"], "email": admin["email"]}
+
+
 @api_router.post("/admin/upload-product-image")
 async def upload_product_image(
     product_id: str = Form(...),
@@ -879,19 +929,11 @@ async def upload_product_image(
     file: UploadFile = File(...),
 ):
     """Verify Supabase access token, upload file to product-images bucket, update products.image_url."""
-    # Verify admin session by using the access token to query user_roles
+    # Verify admin role via the shared guard. We accept the token in the form
+    # body for multipart-form compatibility (browsers can't easily set custom
+    # headers on <form> file uploads).
     try:
-        # Use per-request client with the user's access token to enforce RLS/admin check
-        user_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-        user_client.postgrest.auth(admin_token)
-        user = user_client.auth.get_user(admin_token)
-        if not user or not user.user:
-            raise HTTPException(401, "Invalid session")
-        roles = sb.table("user_roles").select("role").eq(
-            "user_id", user.user.id
-        ).eq("role", "admin").execute()
-        if not roles.data:
-            raise HTTPException(403, "Not an admin")
+        require_admin(authorization=f"Bearer {admin_token}")
     except HTTPException:
         raise
     except Exception as e:

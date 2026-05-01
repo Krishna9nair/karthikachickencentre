@@ -13,6 +13,7 @@ import { Toaster } from './components/ui/toaster';
 const Admin = lazy(() => import('./pages/Admin'));
 const Rider = lazy(() => import('./pages/Rider'));
 const Auth = lazy(() => import('./pages/Auth'));
+const RequireAdmin = lazy(() => import('./components/RequireAdmin'));
 
 // Code-split non-critical UI (floating buttons, offline gate, install prompt)
 // so they don't delay the LCP / TTI on the home page.
@@ -77,7 +78,9 @@ function App() {
                   path="/admin"
                   element={
                     <Suspense fallback={<RouteFallback />}>
-                      <Admin />
+                      <RequireAdmin>
+                        <Admin />
+                      </RequireAdmin>
                     </Suspense>
                   }
                 />
