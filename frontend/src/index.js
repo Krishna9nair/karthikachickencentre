@@ -9,3 +9,10 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+// Flip the body background from "logo white" → "brand cream" only after
+// React has rendered. The CSS transition (defined in index.html) gives a
+// smooth fade so the splash → app handoff looks polished.
+requestAnimationFrame(() => {
+  document.documentElement.setAttribute('data-ready', '');
+});

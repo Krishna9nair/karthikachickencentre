@@ -13,7 +13,10 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   android: {
-    backgroundColor: '#FAF4EC',
+    // Match the logo's white background during the splash so the logo
+    // appears seamlessly without a coloured frame around it. Once the
+    // React app mounts it transitions to the cream brand colour.
+    backgroundColor: '#FFFFFF',
   },
 };
 

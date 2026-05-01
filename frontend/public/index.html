@@ -84,9 +84,15 @@
         -->
         <style>
           *,*::before,*::after{box-sizing:border-box}
-          html,body{margin:0;padding:0;background:#FAF4EC;color:#2A1A14;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeSpeed}
+          /* Initial paint = pure white to match the logo's background. This
+             eliminates the jarring "white square around the logo" effect
+             when the Capacitor / PWA splash hides. After React mounts we
+             flip <html data-ready> and the brand cream background takes
+             over with a quick fade. */
+          html,body{margin:0;padding:0;background:#FFFFFF;color:#2A1A14;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeSpeed;transition:background-color .25s ease-out}
+          html[data-ready] body{background:#FAF4EC}
           body{min-height:100vh;line-height:1.5}
-          .ssr-shell{max-width:1280px;margin:0 auto;padding:24px 20px 32px;min-height:100vh}
+          .ssr-shell{max-width:1280px;margin:0 auto;padding:24px 20px 32px;min-height:100vh;background:#FAF4EC}
           .ssr-nav{display:flex;align-items:center;justify-content:space-between;height:56px;margin-bottom:32px}
           .ssr-brand{display:flex;align-items:center;gap:10px}
           .ssr-logo{width:40px;height:40px;border-radius:50%;background:#FAF4EC;border:1px solid #EADFCF;display:flex;align-items:center;justify-content:center;font-weight:700;color:#B93826;font-size:18px;font-family:Georgia,"Fraunces",serif}
