@@ -26,7 +26,7 @@ const SectionSkeleton = ({ height = '420px' }) => (
 // → Customer Reviews → Visit Shop → Final CTA → Footer
 const Home = () => {
   return (
-    <div className="min-h-screen bg-white pb-20 md:pb-0">
+    <div className="min-h-screen bg-white pb-32 md:pb-0">
       <Navbar />
       <SundayWheelBanner />
       <Hero />

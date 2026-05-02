@@ -160,7 +160,7 @@ const Profile = () => {
 
   // ---------- Signed-in dashboard ----------
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-24 md:pb-0">
       <Navbar />
       <div className="max-w-3xl mx-auto px-5 md:px-8 py-6 md:py-10">
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-[#616161] hover:text-[#D32F2F]">

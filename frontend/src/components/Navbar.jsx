@@ -179,52 +179,21 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile horizontal nav bar */}
-      <nav className="md:hidden border-t border-[#E0E0E0] bg-white">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-4 py-2">
-          {/* Get App pill (mobile prominence) — hidden when already installed */}
-          {!installed && (
+      {/* Mobile horizontal strip removed — primary nav now lives in
+          BottomTabBar. The "Get App" install CTA stays here for prominence. */}
+      {!installed && (
+        <nav className="md:hidden border-t border-[#E0E0E0] bg-white">
+          <div className="flex items-center justify-center px-4 py-2">
             <button
               onClick={() => setInstallOpen(true)}
               data-testid="navbar-get-app-btn-mobile"
-              className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-[#FFEBEE] text-[#D32F2F] border border-[#FFCDD2]"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium bg-[#FFEBEE] text-[#D32F2F] border border-[#FFCDD2]"
             >
               <Download className="w-3.5 h-3.5" /> {t('nav.get_app')}
             </button>
-          )}
-          {NAV.map((n) => (
-            <Link
-              key={n.to + n.label}
-              to={n.to}
-              className={`shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                isActive(n.to)
-                  ? 'bg-[#D32F2F] text-white shadow-sm'
-                  : 'bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]'
-              }`}
-            >
-              {n.label}
-            </Link>
-          ))}
-          {/* Mobile sign-in / profile pill */}
-          {customer ? (
-            <Link
-              to="/profile"
-              data-testid="navbar-mobile-profile-link"
-              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]"
-            >
-              <User className="w-3.5 h-3.5 text-[#D32F2F]" /> {customer.name?.split(' ')[0] || 'Account'}
-            </Link>
-          ) : (
-            <Link
-              to="/auth"
-              data-testid="navbar-mobile-signin-btn"
-              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]"
-            >
-              <User className="w-3.5 h-3.5 text-[#D32F2F]" /> Sign in
-            </Link>
-          )}
-        </div>
-      </nav>
+          </div>
+        </nav>
+      )}
 
       <InstallAppDialog open={installOpen} onClose={() => setInstallOpen(false)} />
     </header>

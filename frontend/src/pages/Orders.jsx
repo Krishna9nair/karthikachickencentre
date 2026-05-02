@@ -141,7 +141,7 @@ const Orders = () => {
 
   // ---------- Orders dashboard ----------
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-24 md:pb-0">
       <Navbar />
       <div className="max-w-3xl mx-auto px-5 md:px-8 py-6 md:py-10">
         <div className="flex items-center justify-between gap-3">

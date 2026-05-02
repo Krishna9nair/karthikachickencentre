@@ -15,7 +15,7 @@ const StickyCartBar = () => {
 
   return (
     <div
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2 pointer-events-none"
+      className="md:hidden fixed bottom-[64px] inset-x-0 z-40 px-3 pb-3 pt-2 pointer-events-none"
       data-testid="sticky-cart-bar"
     >
       <button
