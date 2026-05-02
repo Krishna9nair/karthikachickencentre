@@ -4,6 +4,7 @@ import { Lock, Mail, Loader2, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { useToast } from '../hooks/use-toast';
+import ForgotPasswordDialog from '../components/ForgotPasswordDialog';
 
 // Emails that should be treated as admin staff and routed to /admin after
 // login. Centralized so we only have to update it in one place.
@@ -35,6 +36,7 @@ const Auth = () => {
   const [phone, setPhone] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   // If admin lands here already-authenticated via Supabase Auth, redirect.
   useEffect(() => {
@@ -250,6 +252,19 @@ const Auth = () => {
               </span>
             </label>
 
+            {tab === 'signin' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  data-testid="auth-forgot-password-btn"
+                  className="text-sm text-[#D32F2F] hover:underline font-semibold"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={submitting}
@@ -270,6 +285,11 @@ const Auth = () => {
           Shop staff can sign in with their existing admin email — they'll be taken straight to the dashboard.
         </p>
       </div>
+      <ForgotPasswordDialog
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        defaultEmail={email}
+      />
     </div>
   );
 };

@@ -52,6 +52,7 @@ RATE_LIMITS = {
     "profile_lookup": (60, 60), # 60 profile lookups per minute per IP
     "signup": (3, 3600),        # 3 signups per hour per IP+email
     "login": (10, 600),         # 10 logins per 10 min per IP+email
+    "forgot_password": (3, 3600),  # 3 reset requests per hour per IP+email
 }
 
 
@@ -1150,14 +1151,96 @@ async def upload_product_image(
 # ----------------------- Customer Auth (Google via Emergent) -----------------------
 import bcrypt
 import secrets
+import asyncio
+import resend
 EMERGENT_AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 SESSION_COOKIE_NAME = "session_token"
 SESSION_TTL_DAYS = 7
 SESSION_TTL_REMEMBER_DAYS = 90
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_MINUTES = 15
+PASSWORD_RESET_TTL_MINUTES = 60
 
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+# Configure Resend at module load. Missing key → forgot-password becomes a no-op.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+
+def _frontend_origin(request: Request) -> str:
+    """Decide which origin to put in reset-password emails. Prefer the
+    explicit FRONTEND_URL env var (production deploy), fall back to the
+    request Origin header (works on preview)."""
+    explicit = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    origin = request.headers.get("origin", "").strip().rstrip("/")
+    if origin:
+        return origin
+    return "https://karthikachickencentre.shop"
+
+
+def _password_reset_email_html(name: str, reset_url: str) -> str:
+    """Inline-CSS, table-based HTML for max email-client compatibility."""
+    safe_name = (name or "there").replace("<", "").replace(">", "")[:60]
+    return (
+        '<!doctype html><html><body style="margin:0;padding:0;background:#F5F5F5;'
+        'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#212121;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        'style="background:#F5F5F5;padding:32px 16px;">'
+        '<tr><td align="center">'
+        '<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" '
+        'style="background:#FFFFFF;border:1px solid #E0E0E0;border-radius:12px;max-width:560px;width:100%;">'
+        '<tr><td style="padding:32px 32px 8px 32px;">'
+        '<div style="font-size:13px;letter-spacing:.18em;color:#D32F2F;font-weight:700;">CHICKENCREW</div>'
+        '<h1 style="margin:8px 0 0 0;font-size:22px;color:#212121;">Reset your password</h1>'
+        '</td></tr>'
+        '<tr><td style="padding:8px 32px 16px 32px;font-size:15px;line-height:1.55;color:#212121;">'
+        f'Hi {safe_name},<br><br>'
+        'We received a request to reset your ChickenCrew password. Tap the button below to set a new one. '
+        'This link is valid for 60 minutes.'
+        '</td></tr>'
+        '<tr><td style="padding:8px 32px 24px 32px;">'
+        f'<a href="{reset_url}" target="_blank" '
+        'style="display:inline-block;padding:14px 28px;background:#D32F2F;color:#FFFFFF;'
+        'border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Reset password</a>'
+        '</td></tr>'
+        '<tr><td style="padding:0 32px 24px 32px;font-size:13px;color:#616161;line-height:1.55;">'
+        'If the button doesn\'t work, copy and paste this URL into your browser:<br>'
+        f'<a href="{reset_url}" style="color:#D32F2F;word-break:break-all;">{reset_url}</a>'
+        '</td></tr>'
+        '<tr><td style="padding:16px 32px 32px 32px;font-size:12px;color:#616161;border-top:1px solid #F5F5F5;">'
+        'Didn\'t request this? You can safely ignore this email — your password will stay the same.'
+        '</td></tr>'
+        '</table>'
+        '<div style="margin-top:16px;font-size:11px;color:#616161;">'
+        '© ChickenCrew · Fresh chicken delivered to your door'
+        '</div>'
+        '</td></tr></table></body></html>'
+    )
+
+
+async def _send_password_reset_email(to_email: str, name: str, reset_url: str) -> None:
+    """Fire-and-forget Resend send. Logs but never raises so we don't leak
+    whether an email was actually sent."""
+    if not RESEND_API_KEY:
+        logging.warning("RESEND_API_KEY missing — would send reset email to %s", to_email)
+        logging.warning("Reset URL (DEV ONLY): %s", reset_url)
+        return
+    params = {
+        "from": f"ChickenCrew <{SENDER_EMAIL}>",
+        "to": [to_email],
+        "subject": "Reset your ChickenCrew password",
+        "html": _password_reset_email_html(name, reset_url),
+    }
+    try:
+        resp = await asyncio.to_thread(resend.Emails.send, params)
+        logging.info("Password reset email queued for %s (id=%s)", to_email, (resp or {}).get("id"))
+    except Exception as e:
+        logging.warning("Resend send failed for %s: %s", to_email, e)
 
 
 def _hash_password(plain: str) -> str:
@@ -1511,6 +1594,107 @@ async def auth_login(payload: LoginIn, request: Request):
     })
     _set_session_cookie(response, sess["token"], sess["ttl_days"])
     return response
+
+
+# ----- Forgot / reset password -----
+class ForgotPasswordIn(BaseModel):
+    email: str = Field(..., min_length=5, max_length=120)
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(..., min_length=20, max_length=120)
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/auth/forgot-password")
+async def auth_forgot_password(payload: ForgotPasswordIn, request: Request):
+    """Issues a 1-hour reset token and emails it via Resend.
+    ALWAYS returns 200 (security: don't leak which emails are registered)."""
+    email = payload.email.strip().lower()
+    rate_limit(request, "forgot_password", extra_key=email)
+    # Hide existence: only proceed silently if account exists
+    if not EMAIL_RE.match(email):
+        return {"ok": True}
+    try:
+        cred_res = sb.table("customer_credentials").select("email").eq(
+            "email", email
+        ).limit(1).execute()
+    except Exception:
+        return {"ok": True}
+    if not cred_res.data:
+        return {"ok": True}
+    # Pull name for personalization (best-effort)
+    name = ""
+    try:
+        prof = sb.table("customer_profiles").select("name").eq(
+            "email", email
+        ).limit(1).execute()
+        if prof.data:
+            name = prof.data[0].get("name") or ""
+    except Exception:
+        pass
+    token = secrets.token_urlsafe(40)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TTL_MINUTES)
+    try:
+        sb.table("password_reset_tokens").insert({
+            "token": token,
+            "email": email,
+            "expires_at": expires_at.isoformat(),
+        }).execute()
+    except Exception as e:
+        logging.exception("password_reset_tokens insert failed")
+        return {"ok": True}
+    reset_url = f"{_frontend_origin(request)}/auth/reset?token={token}"
+    await _send_password_reset_email(to_email=email, name=name, reset_url=reset_url)
+    return {"ok": True}
+
+
+@api_router.post("/auth/reset-password")
+async def auth_reset_password(payload: ResetPasswordIn, request: Request):
+    """Verifies the reset token, updates password_hash, marks token used."""
+    if len(payload.password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+    try:
+        res = sb.table("password_reset_tokens").select(
+            "token, email, expires_at, used_at"
+        ).eq("token", payload.token).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    row = res.data[0] if res.data else None
+    if not row:
+        raise HTTPException(400, "This link is invalid or has expired. Request a new one.")
+    if row.get("used_at"):
+        raise HTTPException(400, "This reset link was already used. Request a new one.")
+    expires_raw = row.get("expires_at")
+    try:
+        exp = datetime.fromisoformat(expires_raw.replace("Z", "+00:00")) \
+            if isinstance(expires_raw, str) else expires_raw
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            raise HTTPException(400, "This link has expired. Request a new one.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(400, "This link is invalid. Request a new one.")
+    email = row["email"]
+    new_hash = _hash_password(payload.password)
+    try:
+        sb.table("customer_credentials").update({
+            "password_hash": new_hash,
+            "failed_attempts": 0,
+            "locked_until": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("email", email).execute()
+        sb.table("password_reset_tokens").update({
+            "used_at": datetime.now(timezone.utc).isoformat()
+        }).eq("token", payload.token).execute()
+        # Invalidate every active session for that email — force re-login.
+        sb.table("user_sessions").delete().eq("email", email).execute()
+    except Exception as e:
+        logging.exception("reset password persist failed")
+        raise HTTPException(500, f"Could not reset password: {e}")
+    return {"ok": True}
 
 
 # ----------------------- Customer profile + addresses + orders -----------------------

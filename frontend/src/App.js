@@ -18,6 +18,7 @@ const RequireAdmin = lazy(() => import('./components/RequireAdmin'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Orders = lazy(() => import('./pages/Orders'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const AuthReset = lazy(() => import('./pages/AuthReset'));
 
 // Code-split non-critical UI (floating buttons, offline gate, install prompt)
 // so they don't delay the LCP / TTI on the home page.
@@ -76,6 +77,14 @@ function App() {
                     element={
                       <Suspense fallback={<RouteFallback />}>
                         <AuthCallback />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/auth/reset"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <AuthReset />
                       </Suspense>
                     }
                   />
