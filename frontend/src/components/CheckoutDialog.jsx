@@ -7,6 +7,7 @@ import { useToast } from '../hooks/use-toast';
 import { api, loadRazorpay } from '../lib/api';
 import Bill from './Bill';
 import DeliverySlotPicker from './DeliverySlotPicker';
+import SaveAddressPrompt from './SaveAddressPrompt';
 
 const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
 const FIRST_ORDER_DISCOUNT_PCT = 10;
