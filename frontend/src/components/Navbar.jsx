@@ -43,16 +43,16 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#E0E0E0]">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-3">
-        <Link to="/" className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white border border-[#E0E0E0] flex items-center justify-center shrink-0 overflow-hidden">
-            <img src="/logo.png" alt="ChickenCrew" className="w-8 h-8 md:w-9 md:h-9 object-contain" />
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 md:h-16 flex items-center justify-between gap-3">
+        <Link to="/" className="flex items-center gap-2 md:gap-2.5 min-w-0">
+          <div className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white border border-[#E0E0E0] flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/logo.png" alt="ChickenCrew" className="w-7 h-7 md:w-9 md:h-9 object-contain" />
           </div>
           <div className="leading-tight min-w-0">
             <div className="font-bold text-[#212121] text-base md:text-lg truncate tracking-tight">
               ChickenCrew
             </div>
-            <div className="text-[9px] md:text-[10px] tracking-[0.18em] text-[#616161] font-medium">
+            <div className="hidden md:block text-[10px] tracking-[0.18em] text-[#616161] font-medium">
               FARM FRESH DAILY
             </div>
           </div>
@@ -75,8 +75,8 @@ const Navbar = () => {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          {/* Get App button — hidden once the app is installed */}
+        <div className="flex items-center gap-1.5 md:gap-2">
+          {/* Get App button — desktop only (mobile users have BottomTabBar + Get-App ribbon) */}
           {!installed && (
             <button
               onClick={() => setInstallOpen(true)}
@@ -88,18 +88,18 @@ const Navbar = () => {
             </button>
           )}
 
-          {/* Language toggle (works) */}
+          {/* Language toggle — desktop only on mobile, hide to reduce clutter (lives in account menu) */}
           <button
             onClick={toggleLang}
             data-testid="navbar-lang-toggle"
             aria-label="Toggle language"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] transition-colors"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] transition-colors"
           >
             <Languages className="w-4 h-4 text-[#D32F2F]" />
             <span className="font-medium">{lang === 'en' ? 'EN' : 'हिं'}</span>
           </button>
 
-          {/* Customer account */}
+          {/* Customer account — icon-only on mobile */}
           {customer ? (
             <div className="relative">
               <button
@@ -107,10 +107,10 @@ const Navbar = () => {
                 onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
                 data-testid="navbar-account-btn"
                 aria-label="My account"
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-[#E0E0E0] bg-white hover:border-[#D32F2F] transition-colors"
+                className="flex items-center gap-1.5 p-1 md:px-2 md:py-1.5 rounded-lg border border-[#E0E0E0] bg-white hover:border-[#D32F2F] transition-colors"
               >
                 {customer.picture ? (
-                  <img src={customer.picture} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
+                  <img src={customer.picture} alt="" className="w-7 h-7 md:w-6 md:h-6 rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   <User className="w-5 h-5 text-[#D32F2F]" />
                 )}
@@ -142,6 +142,13 @@ const Navbar = () => {
                     <ShoppingBag className="w-4 h-4" /> My Orders
                   </Link>
                   <button
+                    onMouseDown={(e) => { e.preventDefault(); toggleLang(); }}
+                    data-testid="navbar-account-lang-btn"
+                    className="md:hidden w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[#212121] hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                  >
+                    <Languages className="w-4 h-4" /> {lang === 'en' ? 'हिंदी में देखें' : 'View in English'}
+                  </button>
+                  <button
                     onMouseDown={(e) => { e.preventDefault(); signOut(); setAccountOpen(false); }}
                     data-testid="navbar-signout-btn"
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[#212121] hover:bg-[#FFEBEE] hover:text-[#D32F2F] border-t border-[#F5F5F5]"
@@ -152,26 +159,39 @@ const Navbar = () => {
               )}
             </div>
           ) : (
-            <Link
-              to="/auth"
-              data-testid="navbar-signin-btn"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] hover:text-[#D32F2F] transition-colors"
-            >
-              <User className="w-4 h-4 text-[#D32F2F]" />
-              <span className="font-medium">Sign in</span>
-            </Link>
+            <>
+              {/* Desktop pill */}
+              <Link
+                to="/auth"
+                data-testid="navbar-signin-btn"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] hover:text-[#D32F2F] transition-colors"
+              >
+                <User className="w-4 h-4 text-[#D32F2F]" />
+                <span className="font-medium">Sign in</span>
+              </Link>
+              {/* Mobile icon-only */}
+              <Link
+                to="/auth"
+                data-testid="navbar-signin-icon"
+                aria-label="Sign in"
+                className="sm:hidden flex items-center justify-center w-9 h-9 rounded-lg border border-[#E0E0E0] bg-white hover:border-[#D32F2F] text-[#D32F2F]"
+              >
+                <User className="w-4 h-4" />
+              </Link>
+            </>
           )}
 
-          {/* Cart */}
+          {/* Cart — icon-only on mobile, full button on desktop */}
           <button
             onClick={() => setIsOpen(true)}
             data-testid="navbar-cart-btn"
-            className="flex items-center gap-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white px-3 md:px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors"
+            aria-label={t('nav.cart')}
+            className="relative flex items-center justify-center md:justify-start gap-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white w-9 h-9 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span className="hidden xs:inline">{t('nav.cart')}</span>
+            <span className="hidden md:inline">{t('nav.cart')}</span>
             {itemCount > 0 && (
-              <span className="bg-white text-[#D32F2F] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="absolute md:static -top-1.5 -right-1.5 md:top-auto md:right-auto bg-white text-[#D32F2F] text-[10px] md:text-xs font-bold rounded-full w-4 h-4 md:w-5 md:h-5 flex items-center justify-center border md:border-0 border-[#D32F2F]">
                 {itemCount}
               </span>
             )}
@@ -179,20 +199,17 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile horizontal strip removed — primary nav now lives in
-          BottomTabBar. The "Get App" install CTA stays here for prominence. */}
+      {/* Slim "Get App" ribbon — only on mobile, only when not installed.
+          Replaces the chunkier secondary nav. ~28px tall. */}
       {!installed && (
-        <nav className="md:hidden border-t border-[#E0E0E0] bg-white">
-          <div className="flex items-center justify-center px-4 py-2">
-            <button
-              onClick={() => setInstallOpen(true)}
-              data-testid="navbar-get-app-btn-mobile"
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium bg-[#FFEBEE] text-[#D32F2F] border border-[#FFCDD2]"
-            >
-              <Download className="w-3.5 h-3.5" /> {t('nav.get_app')}
-            </button>
-          </div>
-        </nav>
+        <button
+          type="button"
+          onClick={() => setInstallOpen(true)}
+          data-testid="navbar-get-app-btn-mobile"
+          className="md:hidden w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold text-[#D32F2F] bg-[#FFEBEE] border-t border-[#FFCDD2] hover:bg-[#FFCDD2] transition-colors"
+        >
+          <Download className="w-3 h-3" /> {t('nav.get_app')}
+        </button>
       )}
 
       <InstallAppDialog open={installOpen} onClose={() => setInstallOpen(false)} />
