@@ -1,4 +1,4 @@
--- ChickenCrew — Customer email/password authentication
+ ChickenCrew — Customer email/password authentication
 -- Adds passworded sign-in alongside the existing Google OAuth path.
 -- Run this once in the Supabase SQL editor.
 -- Date: 2026-05-02
