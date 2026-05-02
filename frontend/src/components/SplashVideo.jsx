@@ -4,25 +4,18 @@ import React, { useEffect, useRef, useState } from 'react';
 // fades into the app when the video ends or the user taps to skip.
 //
 // Behaviour:
-//  - Plays once per browser session (sessionStorage flag) so users don't
-//    sit through it on every page nav within the same session.
+//  - Plays on EVERY full app load (page refresh, PWA cold start, native
+//    app launch). It does NOT replay on in-app navigation (we mount this
+//    once at the App root, so route changes don't re-trigger it).
 //  - Muted by default (browsers block autoplay with sound).
-//  - Auto-skips if the video fails to load within 1.5s — never blocks the
+//  - Auto-skips if the video fails to load within 4 s — never blocks the
 //    app from rendering.
-//  - Tap anywhere to skip.
+//  - Tap anywhere or the Skip button to dismiss early.
 //
 // To replace the video: drop a new file at /app/frontend/public/splash.mp4.
-const SESSION_FLAG = 'cc_splash_played';
 
 const SplashVideo = () => {
-  const [active, setActive] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return !sessionStorage.getItem(SESSION_FLAG);
-    } catch (_) {
-      return true;
-    }
-  });
+  const [active, setActive] = useState(true);
   const [fading, setFading] = useState(false);
   const videoRef = useRef(null);
   const timerRef = useRef(null);
@@ -47,7 +40,6 @@ const SplashVideo = () => {
   const finish = () => {
     if (fading) return;
     setFading(true);
-    try { sessionStorage.setItem(SESSION_FLAG, '1'); } catch (_) {}
     // Allow CSS fade to play (300ms) before unmounting.
     setTimeout(() => setActive(false), 320);
   };
