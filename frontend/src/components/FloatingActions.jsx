@@ -56,17 +56,17 @@ const FloatingActions = () => {
       data-testid="floating-actions"
     >
       {showTip && !tipDismissed && (
-        <div className="bg-white border border-[#EADFCF] rounded-2xl shadow-lg px-4 py-3 max-w-[240px] text-sm text-[#2A1A14] relative">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl shadow-lg px-4 py-3 max-w-[240px] text-sm text-[#212121] relative">
           <button
             onClick={dismissTip}
             aria-label="Dismiss"
-            className="absolute top-1.5 right-1.5 p-1 rounded-full text-[#7B5A48] hover:bg-[#F3EADB]"
+            className="absolute top-1.5 right-1.5 p-1 rounded-full text-[#616161] hover:bg-[#F5F5F5]"
           >
             <X className="w-3 h-3" />
           </button>
           <div className="font-medium pr-3">Need help? Tap to chat or call.</div>
-          <div className="text-xs text-[#7B5A48] mt-0.5">Reply usually within 5 min</div>
-          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-[#EADFCF] rotate-45" />
+          <div className="text-xs text-[#616161] mt-0.5">Reply usually within 5 min</div>
+          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-[#E0E0E0] rotate-45" />
         </div>
       )}
 
@@ -76,7 +76,7 @@ const FloatingActions = () => {
         aria-label="Call shop"
         title="Call shop"
         data-testid="floating-call-btn"
-        className="w-12 h-12 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 shadow-lg flex items-center justify-center transition-all"
+        className="w-12 h-12 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-95 shadow-lg flex items-center justify-center transition-all"
       >
         <Phone className="w-5 h-5 text-white" strokeWidth={2.2} />
       </a>

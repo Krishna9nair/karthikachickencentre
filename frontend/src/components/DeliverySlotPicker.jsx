@@ -82,10 +82,10 @@ const DeliverySlotPicker = ({ value, onChange }) => {
   };
 
   return (
-    <div className="rounded-xl border border-[#EADFCF] bg-white p-4" data-testid="delivery-slot-picker">
+    <div className="rounded-xl border border-[#E0E0E0] bg-white p-4" data-testid="delivery-slot-picker">
       <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-[#B93826]" />
-        <div className="text-sm font-semibold text-[#2A1A14]">Delivery time slot</div>
+        <Clock className="w-4 h-4 text-[#D32F2F]" />
+        <div className="text-sm font-semibold text-[#212121]">Delivery time slot</div>
       </div>
 
       {/* Date selector */}
@@ -100,8 +100,8 @@ const DeliverySlotPicker = ({ value, onChange }) => {
               data-testid={`slot-date-${isoDate(d)}`}
               className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
                 active
-                  ? 'bg-[#B93826] text-white border border-[#B93826]'
-                  : 'bg-white text-[#3B2416] border border-[#EADFCF] hover:border-[#B93826]/40'
+                  ? 'bg-[#D32F2F] text-white border border-[#D32F2F]'
+                  : 'bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]/40'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
@@ -113,7 +113,7 @@ const DeliverySlotPicker = ({ value, onChange }) => {
 
       {/* Slots */}
       {slots.length === 0 ? (
-        <div className="text-sm text-[#7B5A48] text-center py-4">
+        <div className="text-sm text-[#616161] text-center py-4">
           No delivery slots left for {formatDateLabel(activeDate).toLowerCase()}. Pick another day.
         </div>
       ) : (
@@ -133,10 +133,10 @@ const DeliverySlotPicker = ({ value, onChange }) => {
                 data-testid={`slot-${s.start}`}
                 className={`py-2.5 rounded-lg text-xs font-medium border transition-colors ${
                   blocked
-                    ? 'bg-[#F3EADB] text-[#A89381] border-[#EADFCF] cursor-not-allowed line-through'
+                    ? 'bg-[#F5F5F5] text-[#757575] border-[#E0E0E0] cursor-not-allowed line-through'
                     : selected
-                    ? 'bg-[#B93826] text-white border-[#B93826] shadow-sm'
-                    : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/40'
+                    ? 'bg-[#D32F2F] text-white border-[#D32F2F] shadow-sm'
+                    : 'bg-white text-[#212121] border-[#E0E0E0] hover:border-[#D32F2F]/40'
                 }`}
               >
                 {s.label}
@@ -147,7 +147,7 @@ const DeliverySlotPicker = ({ value, onChange }) => {
                 ) : remaining !== null && remaining <= 3 ? (
                   <span
                     className={`block text-[9px] mt-0.5 font-semibold not-italic ${
-                      selected ? 'text-white/90' : 'text-[#B93826]'
+                      selected ? 'text-white/90' : 'text-[#D32F2F]'
                     }`}
                   >
                     only {remaining} left

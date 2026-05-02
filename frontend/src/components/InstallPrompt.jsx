@@ -47,13 +47,13 @@ const InstallPrompt = () => {
 
   return (
     <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-md">
-      <div className="bg-white border border-[#EADFCF] rounded-2xl shadow-lg p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#FAF4EC] border border-[#EADFCF] flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="bg-white border border-[#E0E0E0] rounded-2xl shadow-lg p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[#FFFFFF] border border-[#E0E0E0] flex items-center justify-center shrink-0 overflow-hidden">
           <img src="/logo.png" alt="ChickenCrew" className="w-8 h-8 object-contain" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-serif font-bold text-[#2A1A14] text-sm">Install ChickenCrew</div>
-          <div className="text-[11px] text-[#7B5A48] leading-snug">
+          <div className="font-serif font-bold text-[#212121] text-sm">Install ChickenCrew</div>
+          <div className="text-[11px] text-[#616161] leading-snug">
             {isIOS
               ? 'Tap the Share icon → "Add to Home Screen"'
               : 'Quicker access, works offline.'}
@@ -62,12 +62,12 @@ const InstallPrompt = () => {
         {!isIOS && (
           <button
             onClick={install}
-            className="px-3 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-xs font-medium flex items-center gap-1.5"
+            className="px-3 py-2 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-medium flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" /> Install
           </button>
         )}
-        <button onClick={dismiss} className="p-1.5 rounded-full text-[#7B5A48] hover:bg-[#F3EADB]" aria-label="Close">
+        <button onClick={dismiss} className="p-1.5 rounded-full text-[#616161] hover:bg-[#F5F5F5]" aria-label="Close">
           <X className="w-4 h-4" />
         </button>
       </div>

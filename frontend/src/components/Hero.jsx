@@ -1,7 +1,10 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { ShieldCheck, Snowflake, Truck, BadgeCheck } from 'lucide-react';
 import { useT } from '../lib/i18n';
 
+// Hero — Swiggy/Licious style. Clean white background, deep red CTAs,
+// dark grey typography. Primary headline + subtext + Order Now CTA +
+// 4 trust badges. Hero image is hidden on mobile to keep LCP fast.
 const Hero = () => {
   const t = useT();
   const scrollTo = (id) => {
@@ -9,82 +12,95 @@ const Hero = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const badges = [
+    { Icon: ShieldCheck, label: t('trust.hygienic') },
+    { Icon: Snowflake, label: t('trust.never_frozen') },
+    { Icon: Truck, label: t('trust.same_day') },
+    { Icon: BadgeCheck, label: t('trust.fssai') },
+  ];
+
   return (
-    <section className="relative overflow-hidden bg-[#FAF4EC]">
-      <div className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-20 grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+    <section
+      data-testid="hero-section"
+      className="relative overflow-hidden bg-white border-b border-[#E0E0E0]"
+    >
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-10 md:py-20 grid md:grid-cols-2 gap-10 md:gap-14 items-center">
         <div>
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F4E4D1] border border-[#EAD1B5]">
-            <Sparkles className="w-3.5 h-3.5 text-[#B93826]" />
-            <span className="text-[11px] tracking-[0.2em] font-semibold text-[#B93826]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFEBEE] border border-[#FFCDD2]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D32F2F] animate-pulse" />
+            <span className="text-[11px] tracking-[0.18em] font-semibold text-[#D32F2F]">
               {t('hero.eyebrow_long')}
             </span>
           </div>
 
-          <h1 className="mt-4 md:mt-6 font-serif text-[#2A1A14] leading-[1.05] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
-            {t('hero.title_a')}
-            <br />
-            <span className="text-[#B93826] italic">{t('hero.title_b')}</span>
+          <h1
+            data-testid="hero-title"
+            className="mt-4 md:mt-6 font-bold text-[#212121] leading-[1.05] text-4xl sm:text-5xl lg:text-6xl tracking-tight"
+          >
+            {t('hero.title_a')}{' '}
+            <span className="text-[#D32F2F]">{t('hero.title_b')}</span>
           </h1>
 
-          <p className="mt-4 md:mt-6 text-[15px] md:text-[17px] text-[#6B4E3D] max-w-md leading-relaxed">
+          <p className="mt-4 md:mt-5 text-[15px] md:text-[17px] text-[#616161] max-w-md leading-relaxed">
             {t('hero.subtitle_long')}
           </p>
 
-          <div className="mt-5 md:mt-8 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={() => scrollTo('shop')}
-              className="px-6 py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium shadow-sm transition-colors"
+              data-testid="hero-order-now-btn"
+              className="px-7 py-3.5 rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-[0.98] text-white font-semibold shadow-md hover:shadow-lg transition-all"
             >
               {t('hero.cta_primary')}
             </button>
             <button
               onClick={() => scrollTo('price')}
-              className="px-6 py-3 rounded-full border border-[#3B2416]/20 hover:border-[#B93826] text-[#3B2416] font-medium bg-white transition-colors"
+              data-testid="hero-see-price-btn"
+              className="px-7 py-3.5 rounded-lg border border-[#E0E0E0] hover:border-[#D32F2F] hover:text-[#D32F2F] text-[#212121] font-semibold bg-white transition-colors"
             >
               {t('hero.cta_secondary')}
             </button>
           </div>
 
-          <div className="mt-6 md:mt-12 pt-5 md:pt-6 border-t border-[#EADFCF] grid grid-cols-3 gap-4 md:gap-6 max-w-md">
-            <div>
-              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">100%</div>
-              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">{t('hero.stat_local')}</div>
-            </div>
-            <div>
-              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">Daily</div>
-              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">{t('hero.stat_fresh')}</div>
-            </div>
-            <div>
-              <div className="font-serif text-xl md:text-2xl font-bold text-[#B93826]">UPI</div>
-              <div className="text-[11px] md:text-xs text-[#7B5A48] mt-1">{t('hero.stat_upi')}</div>
-            </div>
+          {/* Trust badges row */}
+          <div
+            className="mt-7 md:mt-9 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl"
+            data-testid="hero-trust-badges"
+          >
+            {badges.map(({ Icon, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-2 rounded-lg bg-[#F5F5F5] border border-[#E0E0E0] px-3 py-2.5"
+              >
+                <Icon className="w-4 h-4 text-[#D32F2F] shrink-0" strokeWidth={2.2} />
+                <span className="text-[12px] font-medium text-[#212121] leading-tight">
+                  {label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="relative max-w-xs sm:max-w-sm md:max-w-none mx-auto md:mx-0 w-full hidden md:block">
-          <div className="absolute -inset-6 bg-gradient-to-br from-[#F5D4C0]/40 via-[#FAF4EC] to-[#FAF4EC] rounded-3xl blur-2xl" />
-          <div className="relative rounded-2xl bg-[#FFF8EE] border-2 border-[#C47B4A] shadow-lg overflow-hidden">
-            <div className="m-2 md:m-3 border-[1.5px] border-[#C47B4A] rounded-xl p-3 md:p-4 relative">
-              {/*
-                Decorative hero image. Below the fold on mobile (hidden via
-                `hidden md:block`), so we lazy-load it. On desktop it shows
-                in the right column but is not the LCP element.
-              */}
+        {/* Hero image — hidden on mobile to protect LCP */}
+        <div className="relative max-w-sm md:max-w-none mx-auto md:mx-0 w-full hidden md:block">
+          <div className="absolute -inset-6 bg-[#FFEBEE] rounded-3xl blur-2xl opacity-60" />
+          <div className="relative rounded-2xl bg-white border border-[#E0E0E0] shadow-sm overflow-hidden">
+            <div className="p-4">
               <img
                 src="/hero-rooster-800.webp"
                 srcSet="/hero-rooster-480.webp 480w, /hero-rooster-800.webp 800w"
                 sizes="(max-width: 1024px) 50vw, 40vw"
-                alt="Fresh farm rooster illustration"
+                alt="Fresh chicken delivery illustration"
                 width="800"
                 height="1067"
                 loading="lazy"
                 decoding="async"
-                className="w-full h-auto object-contain max-h-[260px] sm:max-h-[320px] md:max-h-none"
+                className="w-full h-auto object-contain max-h-[360px] md:max-h-[440px]"
                 style={{ aspectRatio: '3 / 4' }}
               />
             </div>
           </div>
-          <div className="absolute -bottom-3 md:-bottom-4 left-6 md:left-16 bg-[#F3B43E] text-[#3B2416] font-serif font-bold text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-md rotate-[-4deg]">
+          <div className="absolute -bottom-3 left-6 md:left-12 bg-[#D32F2F] text-white font-bold text-xs md:text-sm px-4 py-2 rounded-lg shadow-lg">
             {t('hero.open_today')}
           </div>
         </div>

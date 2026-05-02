@@ -42,16 +42,16 @@ const InstallAppDialog = ({ open, onClose }) => {
       data-testid="install-dialog"
     >
       <div
-        className="bg-[#FAF4EC] rounded-2xl w-full max-w-md shadow-2xl border border-[#EADFCF] overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-[#FFFFFF] rounded-2xl w-full max-w-md shadow-2xl border border-[#E0E0E0] overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EADFCF] sticky top-0 bg-[#FAF4EC] z-10">
-          <h3 className="font-serif text-xl font-bold text-[#2A1A14]" data-testid="install-dialog-title">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0] sticky top-0 bg-[#FFFFFF] z-10">
+          <h3 className="font-serif text-xl font-bold text-[#212121]" data-testid="install-dialog-title">
             {t('install.title')}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-[#EADFCF] text-[#3B2416]"
+            className="p-1.5 rounded-full hover:bg-[#E0E0E0] text-[#212121]"
             aria-label={t('install.close')}
             data-testid="install-dialog-close"
           >
@@ -60,10 +60,10 @@ const InstallAppDialog = ({ open, onClose }) => {
         </div>
 
         <div className="p-5 space-y-5">
-          <p className="text-sm text-[#7B5A48]">{t('install.subtitle')}</p>
+          <p className="text-sm text-[#616161]">{t('install.subtitle')}</p>
 
           {/* Platform tabs */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#F3EADB] rounded-full text-xs">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#F5F5F5] rounded-full text-xs">
             {[
               { id: 'android', icon: Smartphone, label: 'Android' },
               { id: 'ios', icon: Apple, label: 'iPhone' },
@@ -77,7 +77,7 @@ const InstallAppDialog = ({ open, onClose }) => {
                   onClick={() => setPlatform(tab.id)}
                   data-testid={`install-tab-${tab.id}`}
                   className={`flex items-center justify-center gap-1.5 py-2 rounded-full font-medium transition-colors ${
-                    active ? 'bg-white shadow-sm text-[#B93826]' : 'text-[#7B5A48] hover:text-[#3B2416]'
+                    active ? 'bg-white shadow-sm text-[#D32F2F]' : 'text-[#616161] hover:text-[#212121]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" /> {tab.label}
@@ -95,7 +95,7 @@ const InstallAppDialog = ({ open, onClose }) => {
               {deferredPrompt && (
                 <button
                   onClick={triggerInstall}
-                  className="mt-2 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium flex items-center justify-center gap-2"
+                  className="mt-2 w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-medium flex items-center justify-center gap-2"
                   data-testid="install-now-btn"
                 >
                   <Download className="w-4 h-4" /> {t('install.android_btn')}
@@ -106,7 +106,7 @@ const InstallAppDialog = ({ open, onClose }) => {
 
           {platform === 'ios' && (
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-[#B93826] tracking-wide">
+              <div className="text-xs font-semibold text-[#D32F2F] tracking-wide">
                 {t('install.ios_title')}
               </div>
               <Step n={1} icon={Share2} text={t('install.ios_step1')} />
@@ -117,19 +117,19 @@ const InstallAppDialog = ({ open, onClose }) => {
 
           {platform === 'desktop' && (
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-[#B93826] tracking-wide">
+              <div className="text-xs font-semibold text-[#D32F2F] tracking-wide">
                 {t('install.desktop_title')}
               </div>
-              <p className="text-sm text-[#3B2416]">{t('install.desktop_text')}</p>
-              <div className="rounded-2xl bg-white border border-[#EADFCF] p-4 flex flex-col items-center">
-                <div className="text-xs text-[#7B5A48] mb-2">{t('install.qr_title')}</div>
+              <p className="text-sm text-[#212121]">{t('install.desktop_text')}</p>
+              <div className="rounded-2xl bg-white border border-[#E0E0E0] p-4 flex flex-col items-center">
+                <div className="text-xs text-[#616161] mb-2">{t('install.qr_title')}</div>
                 <img
                   src={QR_SRC}
                   alt="Install QR code"
                   className="w-40 h-40 rounded-lg"
                   data-testid="install-qr-image"
                 />
-                <div className="mt-2 text-[10px] text-[#7B5A48] font-mono break-all">
+                <div className="mt-2 text-[10px] text-[#616161] font-mono break-all">
                   {SITE_URL}
                 </div>
               </div>
@@ -143,10 +143,10 @@ const InstallAppDialog = ({ open, onClose }) => {
 
 const Step = ({ n, text, icon: Icon }) => (
   <div className="flex items-start gap-3">
-    <div className="shrink-0 w-7 h-7 rounded-full bg-[#B93826] text-white flex items-center justify-center text-xs font-bold">
+    <div className="shrink-0 w-7 h-7 rounded-full bg-[#D32F2F] text-white flex items-center justify-center text-xs font-bold">
       {Icon ? <Icon className="w-3.5 h-3.5" /> : n}
     </div>
-    <div className="text-sm text-[#3B2416] pt-1">{text}</div>
+    <div className="text-sm text-[#212121] pt-1">{text}</div>
   </div>
 );
 

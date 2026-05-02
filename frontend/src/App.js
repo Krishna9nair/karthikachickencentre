@@ -22,8 +22,8 @@ const OfflineGate = lazy(() => import('./components/OfflineGate'));
 const InstallPrompt = lazy(() => import('./components/InstallPrompt'));
 
 const RouteFallback = () => (
-  <div className="min-h-screen bg-[#FAF4EC] flex items-center justify-center">
-    <div className="w-10 h-10 rounded-full border-2 border-[#B93826]/30 border-t-[#B93826] animate-spin" />
+  <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center">
+    <div className="w-10 h-10 rounded-full border-2 border-[#D32F2F]/30 border-t-[#D32F2F] animate-spin" />
   </div>
 );
 
@@ -52,7 +52,7 @@ function App() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-      StatusBar.setBackgroundColor({ color: '#FAF4EC' }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(() => {});
       StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
     }
   }, []);

@@ -7,10 +7,10 @@ const LS_LAST_CUSTOMER = 'cc_last_customer_v1';
 
 // 6 segments — must match WHEEL_PRIZES order on the server.
 const SEGMENTS = [
-  { label: '5% OFF',  short: '5%',  color: '#B93826' },
+  { label: '5% OFF',  short: '5%',  color: '#D32F2F' },
   { label: '10% OFF', short: '10%', color: '#F5A623' },
   { label: '15% OFF', short: '15%', color: '#2E7D32' },
-  { label: 'Try Again', short: 'Better luck', color: '#7B5A48' },
+  { label: 'Try Again', short: 'Better luck', color: '#616161' },
   { label: '₹50 OFF', short: '₹50', color: '#1976D2' },
   { label: '₹75 OFF', short: '₹75', color: '#8E24AA' },
 ];
@@ -124,8 +124,8 @@ const SundayWheel = ({ open, onClose }) => {
       return (
         <div className="p-6 text-center">
           <div className="text-4xl mb-2">🎡</div>
-          <p className="font-serif text-lg text-[#2A1A14]">Come back this Sunday!</p>
-          <p className="text-sm text-[#7B5A48] mt-1 max-w-xs mx-auto">
+          <p className="font-serif text-lg text-[#212121]">Come back this Sunday!</p>
+          <p className="text-sm text-[#616161] mt-1 max-w-xs mx-auto">
             The lucky wheel only spins on Sundays. Win up to <b>15% off</b> or <b>₹75 off</b> your next order.
           </p>
         </div>
@@ -134,8 +134,8 @@ const SundayWheel = ({ open, onClose }) => {
     if (status === 'disabled') {
       return (
         <div className="p-6 text-center">
-          <p className="font-serif text-lg text-[#2A1A14]">Wheel is paused</p>
-          <p className="text-sm text-[#7B5A48] mt-1">It'll be back next Sunday — keep an eye out!</p>
+          <p className="font-serif text-lg text-[#212121]">Wheel is paused</p>
+          <p className="text-sm text-[#616161] mt-1">It'll be back next Sunday — keep an eye out!</p>
         </div>
       );
     }
@@ -144,8 +144,8 @@ const SundayWheel = ({ open, onClose }) => {
       return (
         <div className="p-6 text-center">
           <div className="text-4xl mb-2">{isWin ? '🎉' : '🤞'}</div>
-          <p className="font-serif text-lg text-[#2A1A14]">You already spun today!</p>
-          <p className="text-sm text-[#7B5A48] mt-1">Your prize: <b className="text-[#B93826]">{prize.prize_label}</b></p>
+          <p className="font-serif text-lg text-[#212121]">You already spun today!</p>
+          <p className="text-sm text-[#616161] mt-1">Your prize: <b className="text-[#D32F2F]">{prize.prize_label}</b></p>
           {isWin && prize.coupon_code && (
             <CouponDisplay code={prize.coupon_code} copied={copied} onCopy={copyCode} />
           )}
@@ -161,10 +161,10 @@ const SundayWheel = ({ open, onClose }) => {
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 w-0 h-0
                           border-l-[12px] border-l-transparent
                           border-r-[12px] border-r-transparent
-                          border-t-[18px] border-t-[#2A1A14] drop-shadow-md" />
+                          border-t-[18px] border-t-[#212121] drop-shadow-md" />
           {/* Wheel disc */}
           <div
-            className="absolute inset-0 rounded-full shadow-xl border-4 border-[#2A1A14] overflow-hidden"
+            className="absolute inset-0 rounded-full shadow-xl border-4 border-[#212121] overflow-hidden"
             style={{
               background: `conic-gradient(from 0deg, ${conicStops})`,
               transform: `rotate(${rotation}deg)`,
@@ -188,8 +188,8 @@ const SundayWheel = ({ open, onClose }) => {
           </div>
           {/* Centre hub */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#FAF4EC] border-4 border-[#2A1A14] flex items-center justify-center shadow-md">
-              <Sparkles className="w-6 h-6 text-[#B93826]" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#FFFFFF] border-4 border-[#212121] flex items-center justify-center shadow-md">
+              <Sparkles className="w-6 h-6 text-[#D32F2F]" />
             </div>
           </div>
         </div>
@@ -199,14 +199,14 @@ const SundayWheel = ({ open, onClose }) => {
           <PrizeReveal prize={prize} copied={copied} onCopy={copyCode} />
         ) : (
           <div className="mt-5">
-            <label className="text-xs font-medium text-[#7B5A48]">Your phone number</label>
+            <label className="text-xs font-medium text-[#616161]">Your phone number</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               maxLength={10}
               placeholder="10-digit mobile"
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
               data-testid="wheel-phone"
               disabled={spinning}
             />
@@ -214,7 +214,7 @@ const SundayWheel = ({ open, onClose }) => {
               onClick={onSpin}
               disabled={spinning || phone.length !== 10}
               data-testid="wheel-spin-btn"
-              className="mt-3 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-bold text-base shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              className="mt-3 w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-bold text-base shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {spinning ? (
                 <>
@@ -226,7 +226,7 @@ const SundayWheel = ({ open, onClose }) => {
                 </>
               )}
             </button>
-            <p className="text-[11px] text-center text-[#7B5A48] mt-2">
+            <p className="text-[11px] text-center text-[#616161] mt-2">
               One spin per phone, every Sunday. Win coupons valid for 7 days.
             </p>
           </div>
@@ -242,18 +242,18 @@ const SundayWheel = ({ open, onClose }) => {
       data-testid="sunday-wheel-dialog"
     >
       <div
-        className="bg-[#FAF4EC] rounded-2xl w-full max-w-md shadow-2xl border border-[#EADFCF] overflow-hidden"
+        className="bg-[#FFFFFF] rounded-2xl w-full max-w-md shadow-2xl border border-[#E0E0E0] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EADFCF] bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0] bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0]">
           <div className="flex items-center gap-2">
-            <PartyPopper className="w-5 h-5 text-[#B93826]" />
-            <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Sunday Lucky Spin</h3>
+            <PartyPopper className="w-5 h-5 text-[#D32F2F]" />
+            <h3 className="font-serif text-xl font-bold text-[#212121]">Sunday Lucky Spin</h3>
           </div>
           <button
             onClick={onClose}
             disabled={spinning}
-            className="p-1.5 rounded-full hover:bg-[#EADFCF] text-[#3B2416] disabled:opacity-30"
+            className="p-1.5 rounded-full hover:bg-[#E0E0E0] text-[#212121] disabled:opacity-30"
           >
             <X className="w-4 h-4" />
           </button>
@@ -269,19 +269,19 @@ const PrizeReveal = ({ prize, copied, onCopy }) => {
   return (
     <div className="mt-5 text-center">
       <div className="text-4xl mb-1">{isWin ? '🎉' : '🤞'}</div>
-      <div className="font-serif text-2xl font-bold text-[#2A1A14]">
+      <div className="font-serif text-2xl font-bold text-[#212121]">
         {isWin ? 'You won!' : 'So close…'}
       </div>
-      <div className="mt-1 text-lg font-bold text-[#B93826]">{prize.label}</div>
+      <div className="mt-1 text-lg font-bold text-[#D32F2F]">{prize.label}</div>
       {isWin && prize.coupon_code ? (
         <>
-          <p className="text-xs text-[#7B5A48] mt-2">
+          <p className="text-xs text-[#616161] mt-2">
             Use this code at checkout — valid for 7 days
           </p>
           <CouponDisplay code={prize.coupon_code} copied={copied} onCopy={onCopy} />
         </>
       ) : (
-        <p className="text-sm text-[#7B5A48] mt-2 max-w-xs mx-auto">
+        <p className="text-sm text-[#616161] mt-2 max-w-xs mx-auto">
           Don't worry — come back next Sunday for another spin!
         </p>
       )}
@@ -291,17 +291,17 @@ const PrizeReveal = ({ prize, copied, onCopy }) => {
 
 const CouponDisplay = ({ code, copied, onCopy }) => (
   <div className="mt-3 mx-auto w-fit">
-    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-[#B93826] bg-white">
-      <span className="font-mono font-bold text-lg text-[#2A1A14] tracking-wider">{code}</span>
+    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-[#D32F2F] bg-white">
+      <span className="font-mono font-bold text-lg text-[#212121] tracking-wider">{code}</span>
       <button
         onClick={onCopy}
         data-testid="wheel-copy-coupon"
-        className="ml-2 p-1.5 rounded-full hover:bg-[#FAF4EC] text-[#B93826]"
+        className="ml-2 p-1.5 rounded-full hover:bg-[#FFFFFF] text-[#D32F2F]"
       >
         {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
       </button>
     </div>
-    <p className="text-[10px] text-[#7B5A48] mt-1.5 text-center">
+    <p className="text-[10px] text-[#616161] mt-1.5 text-center">
       {copied ? 'Copied!' : 'Tap the icon to copy'}
     </p>
   </div>

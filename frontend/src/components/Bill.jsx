@@ -106,26 +106,26 @@ const Bill = ({
       .join('');
     const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Bill — Karthika Chicken Centre</title>
       <style>
-        body{font-family:'Segoe UI',-apple-system,Inter,Helvetica,Arial,sans-serif;color:#2A1A14;margin:0;padding:24px;background:#fff}
-        .receipt{max-width:380px;margin:0 auto;border:2px dashed #C47B4A;padding:18px;border-radius:12px}
+        body{font-family:'Segoe UI',-apple-system,Inter,Helvetica,Arial,sans-serif;color:#212121;margin:0;padding:24px;background:#fff}
+        .receipt{max-width:380px;margin:0 auto;border:2px dashed #E0E0E0;padding:18px;border-radius:12px}
         h1{font-family:Georgia,serif;font-size:22px;margin:0;text-align:center}
-        .sub{text-align:center;font-size:10px;letter-spacing:.2em;color:#7B5A48;margin-top:2px}
-        .addr{text-align:center;font-size:10px;color:#7B5A48;margin-top:4px;padding-bottom:10px;border-bottom:1px solid #EADFCF}
+        .sub{text-align:center;font-size:10px;letter-spacing:.2em;color:#616161;margin-top:2px}
+        .addr{text-align:center;font-size:10px;color:#616161;margin-top:4px;padding-bottom:10px;border-bottom:1px solid #E0E0E0}
         .row{display:flex;justify-content:space-between;font-size:11px;margin-top:10px;gap:8px}
-        .row .label{color:#7B5A48;text-transform:uppercase;letter-spacing:.08em;font-size:9px}
+        .row .label{color:#616161;text-transform:uppercase;letter-spacing:.08em;font-size:9px}
         .cust{margin-top:8px;font-size:11px}
         .cust .name{font-weight:600}
-        .cust .meta{color:#7B5A48;font-size:10px}
-        table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px;border-top:1px dashed #EADFCF;padding-top:8px}
-        th{font-size:9px;text-transform:uppercase;color:#7B5A48;letter-spacing:.05em;text-align:left;padding-bottom:4px}
+        .cust .meta{color:#616161;font-size:10px}
+        table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px;border-top:1px dashed #E0E0E0;padding-top:8px}
+        th{font-size:9px;text-transform:uppercase;color:#616161;letter-spacing:.05em;text-align:left;padding-bottom:4px}
         th:nth-child(2){text-align:center}th:nth-child(3),th:nth-child(4){text-align:right}
-        td{padding:6px 0;border-top:1px solid #F3EADB;vertical-align:top}
-        td .rate{font-size:9px;color:#7B5A48}
-        .total{margin-top:12px;padding-top:12px;border-top:2px solid #C47B4A;display:flex;justify-content:space-between;align-items:flex-end}
+        td{padding:6px 0;border-top:1px solid #F5F5F5;vertical-align:top}
+        td .rate{font-size:9px;color:#616161}
+        .total{margin-top:12px;padding-top:12px;border-top:2px solid #E0E0E0;display:flex;justify-content:space-between;align-items:flex-end}
         .total .pay{font-size:11px}
-        .total .pay .label{font-size:9px;color:#7B5A48;text-transform:uppercase}
-        .total .amount{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#B93826}
-        .thanks{margin-top:10px;text-align:center;font-size:10px;color:#7B5A48;font-style:italic}
+        .total .pay .label{font-size:9px;color:#616161;text-transform:uppercase}
+        .total .amount{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#D32F2F}
+        .thanks{margin-top:10px;text-align:center;font-size:10px;color:#616161;font-style:italic}
         @media print{body{padding:0}}
       </style></head>
       <body>
@@ -138,12 +138,12 @@ const Bill = ({
             <div style="text-align:right"><div class="label">Date</div><div>${escapeHtml(date)}</div></div>
           </div>
           <div class="cust">
-            <div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Customer</div>
+            <div class="label" style="color:#616161;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Customer</div>
             <div class="name">${escapeHtml(customer.name)}</div>
             <div class="meta">${escapeHtml(customer.phone)}</div>
             <div class="meta">${escapeHtml(customer.address)}</div>
           </div>
-          ${deliverySlot ? `<div class="cust" style="margin-top:6px"><div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Deliver</div><div class="name">${escapeHtml(formatSlotDate(deliverySlot.date))} · ${escapeHtml(deliverySlot.label)}</div></div>` : ''}
+          ${deliverySlot ? `<div class="cust" style="margin-top:6px"><div class="label" style="color:#616161;text-transform:uppercase;font-size:9px;letter-spacing:.08em">Deliver</div><div class="name">${escapeHtml(formatSlotDate(deliverySlot.date))} · ${escapeHtml(deliverySlot.label)}</div></div>` : ''}
           <table>
             <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr></thead>
             <tbody>${itemsHtml}</tbody>
@@ -155,7 +155,7 @@ const Bill = ({
               <div class="label" style="margin-top:4px">Delivery fee</div>
               <div>${deliveryFee > 0 ? `+ ₹${Number(deliveryFee).toFixed(0)}` : 'FREE'}</div>
             </div>
-            <div><div class="label" style="color:#7B5A48;text-transform:uppercase;font-size:9px;letter-spacing:.08em;text-align:right">Total</div><div class="amount">₹${subtotal.toFixed(0)}</div></div>
+            <div><div class="label" style="color:#616161;text-transform:uppercase;font-size:9px;letter-spacing:.08em;text-align:right">Total</div><div class="amount">₹${subtotal.toFixed(0)}</div></div>
           </div>
           <div class="thanks">Thank you — your order will be ready before you reach the shop.</div>
         </div>
@@ -195,61 +195,61 @@ const Bill = ({
         <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
           <CheckCircle2 className="w-9 h-9 text-emerald-600" />
         </div>
-        <h4 className="mt-3 font-serif text-2xl text-[#2A1A14]">Order placed!</h4>
-        <p className="text-sm text-[#7B5A48] mt-1 max-w-xs">
-          Your bill is below. <b className="text-[#B93826]">One last step</b> — tap the green button to alert the shop owner on WhatsApp so your order starts being prepared.
+        <h4 className="mt-3 font-serif text-2xl text-[#212121]">Order placed!</h4>
+        <p className="text-sm text-[#616161] mt-1 max-w-xs">
+          Your bill is below. <b className="text-[#D32F2F]">One last step</b> — tap the green button to alert the shop owner on WhatsApp so your order starts being prepared.
         </p>
       </div>
 
       {/* Bill / receipt — printable */}
       <div
         ref={billRef}
-        className="mt-5 rounded-xl border-2 border-dashed border-[#C47B4A] bg-white p-5 text-[#2A1A14] print:border-black print:border print:p-3"
+        className="mt-5 rounded-xl border-2 border-dashed border-[#E0E0E0] bg-white p-5 text-[#212121] print:border-black print:border print:p-3"
         data-testid="bill-receipt"
       >
-        <div className="text-center pb-3 border-b border-[#EADFCF]">
+        <div className="text-center pb-3 border-b border-[#E0E0E0]">
           <div className="font-serif text-xl font-bold">Karthika Chicken Centre</div>
-          <div className="text-[10px] tracking-[0.2em] text-[#7B5A48] mt-0.5">
+          <div className="text-[10px] tracking-[0.2em] text-[#616161] mt-0.5">
             FARM FRESH DAILY
           </div>
-          <div className="text-[10px] text-[#7B5A48] mt-1">
+          <div className="text-[10px] text-[#616161] mt-1">
             Trimurti Nagar, Dombivli East · +91 9619417452
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs mt-3">
           <div>
-            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Order ID</div>
+            <div className="text-[10px] text-[#616161] uppercase tracking-wide">Order ID</div>
             <div className="font-mono font-semibold" data-testid="bill-order-id">
               {orderId || '—'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Date</div>
+            <div className="text-[10px] text-[#616161] uppercase tracking-wide">Date</div>
             <div>{date}</div>
           </div>
           <div className="col-span-2">
-            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Customer</div>
+            <div className="text-[10px] text-[#616161] uppercase tracking-wide">Customer</div>
             <div className="font-medium">{customer.name}</div>
-            <div className="text-[#7B5A48]">{customer.phone}</div>
-            <div className="text-[#7B5A48] text-[11px]">{customer.address}</div>
+            <div className="text-[#616161]">{customer.phone}</div>
+            <div className="text-[#616161] text-[11px]">{customer.address}</div>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-dashed border-[#EADFCF] pt-3">
+        <div className="mt-4 border-t border-dashed border-[#E0E0E0] pt-3">
           {deliverySlot && (
             <div
               className="mb-3 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 flex items-start gap-2"
               data-testid="bill-delivery-slot"
             >
-              <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Deliver</div>
-              <div className="text-xs font-semibold text-[#2A1A14]">
+              <div className="text-[10px] text-[#616161] uppercase tracking-wide">Deliver</div>
+              <div className="text-xs font-semibold text-[#212121]">
                 {formatSlotDate(deliverySlot.date)} · {deliverySlot.label}
               </div>
             </div>
           )}
           <table className="w-full text-xs" data-testid="bill-items-table">
-            <thead className="text-[10px] uppercase tracking-wider text-[#7B5A48]">
+            <thead className="text-[10px] uppercase tracking-wider text-[#616161]">
               <tr>
                 <th className="text-left pb-1">Item</th>
                 <th className="text-center pb-1">Qty</th>
@@ -259,12 +259,12 @@ const Bill = ({
             </thead>
             <tbody>
               {items.map((i) => (
-                <tr key={i.id} className="border-t border-[#F3EADB]">
+                <tr key={i.id} className="border-t border-[#F5F5F5]">
                   <td className="py-1.5 align-top">{i.name}</td>
                   <td className="py-1.5 text-center">{formatQty(i.qty, i.unit)}</td>
                   <td className="py-1.5 text-right">
                     ₹{i.price}
-                    <div className="text-[9px] text-[#7B5A48]">/{UNIT_SHORT[normalizeUnit(i.unit)]}</div>
+                    <div className="text-[9px] text-[#616161]">/{UNIT_SHORT[normalizeUnit(i.unit)]}</div>
                   </td>
                   <td className="py-1.5 text-right font-semibold">
                     ₹{calcSubtotal(i.price, i.qty)}
@@ -275,9 +275,9 @@ const Bill = ({
           </table>
         </div>
 
-        <div className="mt-3 pt-3 border-t-2 border-[#C47B4A] flex items-center justify-between">
+        <div className="mt-3 pt-3 border-t-2 border-[#E0E0E0] flex items-center justify-between">
           <div>
-            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Payment</div>
+            <div className="text-[10px] text-[#616161] uppercase tracking-wide">Payment</div>
             <div className="text-xs font-medium">
               {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid online'}
             </div>
@@ -300,21 +300,21 @@ const Bill = ({
               </div>
             )}
             <div
-              className="text-[10px] text-[#7B5A48] mt-1"
+              className="text-[10px] text-[#616161] mt-1"
               data-testid="bill-delivery-fee-line"
             >
               Delivery fee: {deliveryFee > 0 ? `+ ₹${Number(deliveryFee).toFixed(0)}` : <b className="text-emerald-700">FREE</b>}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-[#7B5A48] uppercase tracking-wide">Total</div>
-            <div className="font-serif text-2xl font-bold text-[#B93826]" data-testid="bill-total">
+            <div className="text-[10px] text-[#616161] uppercase tracking-wide">Total</div>
+            <div className="font-serif text-2xl font-bold text-[#D32F2F]" data-testid="bill-total">
               ₹{subtotal.toFixed(0)}
             </div>
           </div>
         </div>
 
-        <div className="mt-3 text-center text-[10px] text-[#7B5A48] italic">
+        <div className="mt-3 text-center text-[10px] text-[#616161] italic">
           Thank you — your order will be ready before you reach the shop.
         </div>
       </div>
@@ -323,15 +323,15 @@ const Bill = ({
       <div className="mt-5 print:hidden">
         {/* Prominent prompt to alert the shop owner */}
         <div className="rounded-xl bg-[#FFF7DA] border border-[#F0DC8A] px-4 py-3 flex items-start gap-3">
-          <div className="shrink-0 w-7 h-7 rounded-full bg-[#B93826] text-white flex items-center justify-center text-xs font-bold">
+          <div className="shrink-0 w-7 h-7 rounded-full bg-[#D32F2F] text-white flex items-center justify-center text-xs font-bold">
             !
           </div>
-          <div className="flex-1 text-[13px] leading-snug text-[#5C3A14]">
-            <div className="font-semibold text-[#2A1A14]">Last step — alert the shop owner</div>
+          <div className="flex-1 text-[13px] leading-snug text-[#212121]">
+            <div className="font-semibold text-[#212121]">Last step — alert the shop owner</div>
             Press the green button below to send your order details to the owner on WhatsApp. Without this, the shop won't know your order.
           </div>
         </div>
-        <div className="flex justify-center mt-2 mb-1 text-[#B93826] animate-bounce">
+        <div className="flex justify-center mt-2 mb-1 text-[#D32F2F] animate-bounce">
           <ArrowDown className="w-5 h-5" />
         </div>
 
@@ -341,7 +341,7 @@ const Bill = ({
           rel="noopener noreferrer"
           onClick={() => setNotified(true)}
           data-testid="bill-notify-shop-btn"
-          className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-bold text-base shadow-lg transition-colors ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-[#FAF4EC]"
+          className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] text-white font-bold text-base shadow-lg transition-colors ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-[#FFFFFF]"
         >
           <MessageCircle className="w-5 h-5 fill-white" />
           {notified ? 'Re-send to shop on WhatsApp' : 'Alert shop on WhatsApp'}
@@ -351,14 +351,14 @@ const Bill = ({
           <button
             onClick={handlePrint}
             data-testid="bill-print-btn"
-            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#E0E0E0] bg-white hover:border-[#D32F2F]/40 text-[#212121] text-sm font-medium transition-colors"
           >
             <Printer className="w-4 h-4" /> Print
           </button>
           <button
             onClick={handleCopy}
             data-testid="bill-copy-btn"
-            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#EADFCF] bg-white hover:border-[#B93826]/40 text-[#3B2416] text-sm font-medium transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-full border border-[#E0E0E0] bg-white hover:border-[#D32F2F]/40 text-[#212121] text-sm font-medium transition-colors"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied!' : 'Copy bill'}
@@ -369,7 +369,7 @@ const Bill = ({
       <button
         onClick={onDone}
         data-testid="bill-done-btn"
-        className="mt-3 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium print:hidden"
+        className="mt-3 w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-medium print:hidden"
       >
         Done
       </button>
@@ -380,7 +380,7 @@ const Bill = ({
         type="button"
         onClick={() => setReviewOpen(true)}
         data-testid="bill-leave-review-btn"
-        className="mt-3 w-full py-2.5 rounded-full border-2 border-[#F5A623] bg-[#FFF7DA] hover:bg-[#FFEFB7] text-[#5C3A14] text-sm font-medium flex items-center justify-center gap-2 print:hidden"
+        className="mt-3 w-full py-2.5 rounded-full border-2 border-[#F5A623] bg-[#FFF7DA] hover:bg-[#FFF8E1] text-[#212121] text-sm font-medium flex items-center justify-center gap-2 print:hidden"
       >
         <Star className="w-4 h-4 text-[#F5A623] fill-[#F5A623]" />
         Got your meat? Leave a review

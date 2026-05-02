@@ -6,8 +6,8 @@
 /* Font setup via Google Fonts in index.html head (fallback safe) */
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #FAF4EC;
-  color: #2A1A14;
+  background: #FFFFFF;
+  color: #212121;
 }
 
 .font-serif {

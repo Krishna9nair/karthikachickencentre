@@ -69,29 +69,10 @@ const ProductCard = React.memo(function ProductCard({ product }) {
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-[#EADFCF] p-5 md:p-6 shadow-sm hover:shadow-lg hover:border-[#B93826]/40 transition-all duration-200 relative overflow-hidden flex flex-col">
-      {/* Top-right badges */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-[1]">
-        {isBestSeller && (
-          <span
-            data-testid={`product-bestseller-badge-${product.id}`}
-            className="inline-flex items-center gap-1 bg-[#F3B43E] text-[#3B2416] text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full shadow"
-          >
-            <Flame className="w-3 h-3 fill-[#B93826] text-[#B93826]" /> BEST SELLER
-          </span>
-        )}
-        {cartQty > 0 && (
-          <span
-            data-testid={`product-qty-badge-${product.id}`}
-            className="bg-[#B93826] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow"
-          >
-            IN CART
-          </span>
-        )}
-      </div>
-
-      {product.image_url && (
-        <div className="mb-4 aspect-video rounded-lg overflow-hidden bg-[#F3EADB]">
+    <div className="group bg-white rounded-xl border border-[#E0E0E0] p-4 md:p-5 shadow-sm hover:shadow-lg hover:border-[#D32F2F]/40 transition-all duration-200 relative overflow-hidden flex flex-col">
+      {/* Image with badges overlaid */}
+      {product.image_url ? (
+        <div className="relative mb-4 aspect-[4/3] rounded-lg overflow-hidden bg-[#F5F5F5]">
           <img
             src={product.image_url}
             alt={product.name}
@@ -99,23 +80,64 @@ const ProductCard = React.memo(function ProductCard({ product }) {
             decoding="async"
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+          <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
+            {isBestSeller ? (
+              <span
+                data-testid={`product-bestseller-badge-${product.id}`}
+                className="inline-flex items-center gap-1 bg-[#D32F2F] text-white text-[10px] font-bold tracking-wider px-2 py-1 rounded-md shadow"
+              >
+                <Flame className="w-3 h-3" /> BEST SELLER
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold tracking-wider px-2 py-1 rounded-md shadow">
+                FRESH TODAY
+              </span>
+            )}
+          </div>
+          {cartQty > 0 && (
+            <span
+              data-testid={`product-qty-badge-${product.id}`}
+              className="absolute top-2 right-2 bg-[#D32F2F] text-white text-[10px] font-bold px-2 py-1 rounded-md shadow"
+            >
+              IN CART
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-[1]">
+          {isBestSeller && (
+            <span
+              data-testid={`product-bestseller-badge-${product.id}`}
+              className="inline-flex items-center gap-1 bg-[#D32F2F] text-white text-[10px] font-bold tracking-wider px-2 py-1 rounded-md shadow"
+            >
+              <Flame className="w-3 h-3" /> BEST SELLER
+            </span>
+          )}
+          {cartQty > 0 && (
+            <span
+              data-testid={`product-qty-badge-${product.id}`}
+              className="bg-[#D32F2F] text-white text-[10px] font-bold px-2 py-1 rounded-md shadow"
+            >
+              IN CART
+            </span>
+          )}
         </div>
       )}
 
-      <h3 className="font-serif text-xl md:text-2xl text-[#2A1A14] leading-tight pr-24">
+      <h3 className="font-bold text-lg md:text-xl text-[#212121] leading-tight tracking-tight">
         {product.name}
       </h3>
       {product.description && (
-        <p className="mt-1.5 text-sm text-[#7B5A48] line-clamp-2">{product.description}</p>
+        <p className="mt-1 text-[13px] text-[#616161] line-clamp-2 leading-snug">{product.description}</p>
       )}
 
       {/* Big price */}
-      <div className="mt-4">
+      <div className="mt-3">
         <div className="flex items-baseline gap-1.5">
-          <span className="font-serif text-4xl md:text-5xl font-bold text-[#B93826] leading-none">
+          <span className="text-3xl md:text-4xl font-bold text-[#212121] leading-none">
             ₹{product.price ?? '—'}
           </span>
-          <span className="text-sm text-[#7B5A48]">/{UNIT_SHORT[unit]}</span>
+          <span className="text-sm text-[#616161]">/{UNIT_SHORT[unit]}</span>
         </div>
       </div>
 
@@ -132,12 +154,12 @@ const ProductCard = React.memo(function ProductCard({ product }) {
       )}
 
       {/* CTA row */}
-      <div className="mt-5 pt-4 border-t border-[#F3EADB] flex items-center gap-2">
+      <div className="mt-4 pt-4 border-t border-[#F5F5F5] flex items-center gap-2">
         {cartQty > 0 ? (
-          <div className="flex items-center gap-1 bg-[#B93826] rounded-full p-1 mr-auto">
+          <div className="flex items-center gap-1 bg-[#D32F2F] rounded-lg p-1 mr-auto">
             <button
               onClick={dec}
-              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC]"
+              className="w-8 h-8 rounded-md bg-white text-[#D32F2F] flex items-center justify-center hover:bg-[#FFEBEE]"
               aria-label="Decrease"
             >
               {cartQty <= presets.step ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
@@ -147,7 +169,7 @@ const ProductCard = React.memo(function ProductCard({ product }) {
             </span>
             <button
               onClick={inc}
-              className="w-8 h-8 rounded-full bg-white text-[#B93826] flex items-center justify-center hover:bg-[#FAF4EC]"
+              className="w-8 h-8 rounded-md bg-white text-[#D32F2F] flex items-center justify-center hover:bg-[#FFEBEE]"
               aria-label="Increase"
             >
               <Plus className="w-4 h-4" />
@@ -158,7 +180,7 @@ const ProductCard = React.memo(function ProductCard({ product }) {
             onClick={() => handleAdd()}
             disabled={!product.price}
             data-testid={`product-add-btn-${product.id}`}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-95 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" /> {t('shop.add')}
           </button>
@@ -171,7 +193,7 @@ const ProductCard = React.memo(function ProductCard({ product }) {
           aria-label={`Order ${product.name} on WhatsApp`}
           title="Order on WhatsApp"
           data-testid={`product-wa-btn-${product.id}`}
-          className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 text-white shadow-md transition-all"
+          className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 text-white shadow-sm transition-all"
         >
           <MessageCircle className="w-5 h-5 fill-white" strokeWidth={1.5} />
         </a>
@@ -223,44 +245,50 @@ const Shop = () => {
   );
 
   return (
-    <section id="shop" className="bg-[#FAF4EC] py-10 md:py-20">
+    <section id="shop" className="bg-white py-12 md:py-20">
       <div className="max-w-6xl mx-auto px-5 md:px-8">
-        <div className="text-center mb-8 md:mb-12">
-          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">{t('shop.eyebrow')}</div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">{t('shop.title')}</h2>
-          <p className="mt-3 text-[#7B5A48] max-w-xl mx-auto">
+        <div className="text-center mb-8 md:mb-10">
+          <div className="text-[11px] tracking-[0.25em] font-bold text-[#D32F2F]">{t('shop.eyebrow')}</div>
+          <h2 className="mt-2 font-bold text-3xl md:text-4xl text-[#212121] tracking-tight">{t('shop.title')}</h2>
+          <p className="mt-3 text-[#616161] max-w-xl mx-auto text-sm md:text-base">
             {t('shop.subtitle')}
           </p>
           <div
-            className="mt-5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] text-[#5C3A14] text-xs font-bold tracking-wide shadow-sm"
+            className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FFEBEE] border border-[#FFCDD2] text-[#D32F2F] text-xs font-bold tracking-wide"
             data-testid="first-order-promo-badge"
           >
-            <Flame className="w-3.5 h-3.5 text-[#B93826]" />
+            <Flame className="w-3.5 h-3.5" />
             FIRST ORDER? GET 10% OFF AT CHECKOUT
           </div>
         </div>
 
         {status === 'loading' ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="shop-loading">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5" data-testid="shop-loading">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-72 rounded-2xl bg-white border border-[#EADFCF] animate-pulse" />
+              <div key={i} className="rounded-xl bg-white border border-[#E0E0E0] p-4 md:p-5 animate-pulse">
+                <div className="aspect-[4/3] rounded-lg bg-[#F5F5F5] mb-4" />
+                <div className="h-5 w-2/3 bg-[#F5F5F5] rounded mb-2" />
+                <div className="h-3 w-full bg-[#F5F5F5] rounded mb-4" />
+                <div className="h-8 w-1/3 bg-[#F5F5F5] rounded mb-4" />
+                <div className="h-10 w-full bg-[#F5F5F5] rounded" />
+              </div>
             ))}
           </div>
         ) : status === 'error' ? (
           <div className="text-center py-10" data-testid="shop-error">
-            <div className="text-[#7B5A48] mb-4">{t('shop.error')}</div>
+            <div className="text-[#616161] mb-4 text-sm">{t('shop.error')}</div>
             <button
               onClick={load}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm font-semibold transition-colors"
               data-testid="shop-retry-btn"
             >
               <RefreshCw className="w-4 h-4" /> {t('price.retry')}
             </button>
           </div>
         ) : sorted.length === 0 ? (
-          <div className="text-center text-[#7B5A48] py-10">{t('shop.empty')}</div>
+          <div className="text-center text-[#616161] py-10">{t('shop.empty')}</div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             {sorted.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

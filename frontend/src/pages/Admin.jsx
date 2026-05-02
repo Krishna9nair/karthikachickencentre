@@ -17,15 +17,15 @@ import { UNITS, UNIT_LABEL, isValidUnit, normalizeUnit } from '../lib/units';
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const StatCard = ({ icon: Icon, label, value, sub }) => (
-  <div className="bg-white border border-[#EADFCF] rounded-2xl p-5">
+  <div className="bg-white border border-[#E0E0E0] rounded-2xl p-5">
     <div className="flex items-center justify-between">
-      <div className="text-xs tracking-wider text-[#7B5A48] font-medium">{label}</div>
-      <div className="w-9 h-9 rounded-full bg-[#F4E4D1] flex items-center justify-center">
-        <Icon className="w-4 h-4 text-[#B93826]" />
+      <div className="text-xs tracking-wider text-[#616161] font-medium">{label}</div>
+      <div className="w-9 h-9 rounded-full bg-[#FFEBEE] flex items-center justify-center">
+        <Icon className="w-4 h-4 text-[#D32F2F]" />
       </div>
     </div>
-    <div className="mt-3 font-serif text-3xl font-bold text-[#2A1A14]">{value}</div>
-    {sub && <div className="text-xs text-[#7B5A48] mt-1">{sub}</div>}
+    <div className="mt-3 font-serif text-3xl font-bold text-[#212121]">{value}</div>
+    {sub && <div className="text-xs text-[#616161] mt-1">{sub}</div>}
   </div>
 );
 
@@ -403,7 +403,7 @@ const Admin = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#FAF4EC] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-[#B93826]" /></div>;
+  if (loading) return <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-[#D32F2F]" /></div>;
   if (!session || !isAdmin) return <Navigate to="/auth" replace />;
 
   const activeOrders = orders.filter((o) => o.payment_status === 'paid' || o.payment_status === 'preparing' || o.payment_status === 'ready' || o.payment_status === 'out_for_delivery');
@@ -412,19 +412,19 @@ const Admin = () => {
     .reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#FAF4EC]">
+    <div className="min-h-screen bg-[#FFFFFF]">
       <Navbar />
 
       <section className="max-w-7xl mx-auto px-5 md:px-8 py-10">
         <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
           <div>
-            <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">SHOP DASHBOARD</div>
-            <h1 className="font-serif text-4xl text-[#2A1A14] mt-1">Admin</h1>
-            <p className="text-sm text-[#7B5A48] mt-1">Signed in as {session.user.email}</p>
+            <div className="text-[11px] tracking-[0.25em] font-semibold text-[#D32F2F]">SHOP DASHBOARD</div>
+            <h1 className="font-serif text-4xl text-[#212121] mt-1">Admin</h1>
+            <p className="text-sm text-[#616161] mt-1">Signed in as {session.user.email}</p>
           </div>
           <button
             onClick={signOut}
-            className="px-4 py-2 rounded-full border border-[#EADFCF] hover:border-[#B93826] text-sm text-[#3B2416] flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E0E0E0] hover:border-[#D32F2F] text-sm text-[#212121] flex items-center gap-1.5"
           >
             <LogOut className="w-4 h-4" /> Sign out
           </button>
@@ -439,21 +439,21 @@ const Admin = () => {
 
         {/* Shop Settings */}
         {shop && (
-          <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mb-6">
+          <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
-                  <Store className="w-5 h-5 text-[#B93826]" />
+                <div className="w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center">
+                  <Store className="w-5 h-5 text-[#D32F2F]" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Shop Settings</h3>
-                  <p className="text-xs text-[#7B5A48]">Change shop name, phone, address, UPI ID, and rider passcode.</p>
+                  <h3 className="font-serif text-xl font-bold text-[#212121]">Shop Settings</h3>
+                  <p className="text-xs text-[#616161]">Change shop name, phone, address, UPI ID, and rider passcode.</p>
                 </div>
               </div>
               <button
                 onClick={saveShop}
                 disabled={savingShop || !shopDraft}
-                className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5 disabled:opacity-60"
+                className="px-4 py-2 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm flex items-center gap-1.5 disabled:opacity-60"
               >
                 {savingShop ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save changes
@@ -462,69 +462,69 @@ const Admin = () => {
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-[#7B5A48]">Shop name</label>
+                <label className="text-xs font-medium text-[#616161]">Shop name</label>
                 <input
                   value={shopDraft?.shop_name || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, shop_name: e.target.value })}
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-[#7B5A48]">Contact phone</label>
+                <label className="text-xs font-medium text-[#616161]">Contact phone</label>
                 <input
                   value={shopDraft?.contact_phone || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, contact_phone: e.target.value })}
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[#7B5A48]">Address</label>
+                <label className="text-xs font-medium text-[#616161]">Address</label>
                 <textarea
                   rows={2}
                   value={shopDraft?.address || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, address: e.target.value })}
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm resize-none"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm resize-none"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[#7B5A48]">Notice (shown in shop)</label>
+                <label className="text-xs font-medium text-[#616161]">Notice (shown in shop)</label>
                 <input
                   value={shopDraft?.notice || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, notice: e.target.value })}
                   placeholder="e.g., Closed Monday for market day"
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-[#7B5A48]">UPI ID</label>
+                <label className="text-xs font-medium text-[#616161]">UPI ID</label>
                 <input
                   value={shopDraft?.upi_id || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, upi_id: e.target.value })}
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-[#7B5A48]">Rider passcode</label>
+                <label className="text-xs font-medium text-[#616161]">Rider passcode</label>
                 <input
                   value={shopDraft?.rider_passcode || ''}
                   onChange={(e) => setShopDraft({ ...shopDraft, rider_passcode: e.target.value })}
-                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm font-mono"
+                  className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm font-mono"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white cursor-pointer">
+                <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white cursor-pointer">
                   <input
                     type="checkbox"
                     checked={shopDraft?.sunday_wheel_enabled !== false}
                     onChange={(e) =>
                       setShopDraft({ ...shopDraft, sunday_wheel_enabled: e.target.checked })
                     }
-                    className="w-4 h-4 accent-[#B93826]"
+                    className="w-4 h-4 accent-[#D32F2F]"
                     data-testid="shop-sunday-wheel-toggle"
                   />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-[#2A1A14]">Sunday Lucky Spin</div>
-                    <div className="text-[11px] text-[#7B5A48]">
+                    <div className="text-sm font-medium text-[#212121]">Sunday Lucky Spin</div>
+                    <div className="text-[11px] text-[#616161]">
                       Show the spinning wheel to customers every Sunday. Uncheck to pause the promo.
                     </div>
                   </div>
@@ -535,41 +535,41 @@ const Admin = () => {
         )}
 
         {/* Products + Prices */}
-        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mb-6">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div>
-              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Products & Today's Board</h3>
-              <p className="text-xs text-[#7B5A48] mt-1">Click a price to edit. Hide a product by toggling active.</p>
+              <h3 className="font-serif text-xl font-bold text-[#212121]">Products & Today's Board</h3>
+              <p className="text-xs text-[#616161] mt-1">Click a price to edit. Hide a product by toggling active.</p>
             </div>
             <button
               onClick={() => setShowAddProduct(true)}
-              className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" /> Add product
             </button>
           </div>
 
           {showAddProduct && (
-            <div className="border border-dashed border-[#B93826] rounded-xl p-4 mb-4 bg-[#FAF4EC]">
+            <div className="border border-dashed border-[#D32F2F] rounded-xl p-4 mb-4 bg-[#FFFFFF]">
               <div className="grid sm:grid-cols-3 gap-3">
                 <input
                   placeholder="Name"
                   value={newProduct.name}
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm"
                   data-testid="admin-new-product-name"
                 />
                 <input
                   placeholder="Description"
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm"
                   data-testid="admin-new-product-desc"
                 />
                 <select
                   value={newProduct.unit}
                   onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm bg-white"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm bg-white"
                   data-testid="admin-new-product-unit"
                 >
                   {UNITS.map((u) => (
@@ -580,20 +580,20 @@ const Admin = () => {
                 </select>
               </div>
               <div className="mt-3 flex gap-2 justify-end">
-                <button onClick={() => setShowAddProduct(false)} className="px-4 py-1.5 rounded-full border border-[#EADFCF] text-sm">Cancel</button>
-                <button onClick={addProduct} className="px-4 py-1.5 rounded-full bg-[#B93826] text-white text-sm">Save</button>
+                <button onClick={() => setShowAddProduct(false)} className="px-4 py-1.5 rounded-full border border-[#E0E0E0] text-sm">Cancel</button>
+                <button onClick={addProduct} className="px-4 py-1.5 rounded-full bg-[#D32F2F] text-white text-sm">Save</button>
               </div>
             </div>
           )}
 
-          <ul className="divide-y divide-[#EADFCF]">
+          <ul className="divide-y divide-[#E0E0E0]">
             {products.map((p) => (
               <li key={p.id} className="py-4 flex flex-wrap items-center gap-4">
-                <div className="w-14 h-14 rounded-lg bg-[#F3EADB] overflow-hidden flex items-center justify-center shrink-0 relative">
+                <div className="w-14 h-14 rounded-lg bg-[#F5F5F5] overflow-hidden flex items-center justify-center shrink-0 relative">
                   {p.image_url ? (
                     <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
                   ) : (
-                    <ImageIcon className="w-5 h-5 text-[#7B5A48]" />
+                    <ImageIcon className="w-5 h-5 text-[#616161]" />
                   )}
                   <label className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/40 transition-colors cursor-pointer group">
                     <input
@@ -610,24 +610,24 @@ const Admin = () => {
                   </label>
                 </div>
                 <div className="flex-1 min-w-[160px]">
-                  <div className="font-serif text-lg text-[#2A1A14]">{p.name}</div>
-                  <div className="text-xs text-[#7B5A48]">{p.description}</div>
+                  <div className="font-serif text-lg text-[#212121]">{p.name}</div>
+                  <div className="text-xs text-[#616161]">{p.description}</div>
                 </div>
                 <div className="min-w-[120px]">
                   {editingPrice === p.id ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-[#B93826]">₹</span>
+                      <span className="text-[#D32F2F]">₹</span>
                       <input
                         autoFocus
                         type="number"
                         value={priceInput}
                         onChange={(e) => setPriceInput(e.target.value)}
-                        className="w-20 px-2 py-1 rounded-md border border-[#B93826] text-right text-sm"
+                        className="w-20 px-2 py-1 rounded-md border border-[#D32F2F] text-right text-sm"
                       />
-                      <button onClick={() => savePrice(p.id)} className="p-1.5 rounded-md bg-[#B93826] text-white">
+                      <button onClick={() => savePrice(p.id)} className="p-1.5 rounded-md bg-[#D32F2F] text-white">
                         <Save className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setEditingPrice(null)} className="p-1.5 rounded-md text-[#7B5A48]">
+                      <button onClick={() => setEditingPrice(null)} className="p-1.5 rounded-md text-[#616161]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -639,16 +639,16 @@ const Admin = () => {
                       }}
                       className="text-left"
                     >
-                      <span className="font-serif font-bold text-[#B93826] text-xl">₹{priceMap[p.id] ?? '—'}</span>
-                      <span className="text-xs text-[#7B5A48] ml-1">/{normalizeUnit(p.unit)}</span>
-                      <Pencil className="w-3 h-3 inline ml-2 text-[#7B5A48]" />
+                      <span className="font-serif font-bold text-[#D32F2F] text-xl">₹{priceMap[p.id] ?? '—'}</span>
+                      <span className="text-xs text-[#616161] ml-1">/{normalizeUnit(p.unit)}</span>
+                      <Pencil className="w-3 h-3 inline ml-2 text-[#616161]" />
                     </button>
                   )}
                 </div>
                 <select
                   value={normalizeUnit(p.unit)}
                   onChange={(e) => updateUnit(p.id, e.target.value)}
-                  className="px-2.5 py-1.5 rounded-full border border-[#EADFCF] text-xs bg-white text-[#3B2416] hover:border-[#B93826]/40 transition-colors"
+                  className="px-2.5 py-1.5 rounded-full border border-[#E0E0E0] text-xs bg-white text-[#212121] hover:border-[#D32F2F]/40 transition-colors"
                   title="Change unit"
                   data-testid={`admin-unit-select-${p.id}`}
                 >
@@ -656,18 +656,18 @@ const Admin = () => {
                     <option key={u} value={u}>{UNIT_LABEL[u]}</option>
                   ))}
                 </select>
-                <label className="flex items-center gap-2 text-xs text-[#7B5A48]">
+                <label className="flex items-center gap-2 text-xs text-[#616161]">
                   <input
                     type="checkbox"
                     checked={p.is_active}
                     onChange={() => toggleActive(p)}
-                    className="w-4 h-4 accent-[#B93826]"
+                    className="w-4 h-4 accent-[#D32F2F]"
                   />
                   Active
                 </label>
                 <button
                   onClick={() => deleteProduct(p.id)}
-                  className="p-2 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                  className="p-2 rounded-full text-[#616161] hover:text-white hover:bg-[#D32F2F]"
                   title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -678,46 +678,46 @@ const Admin = () => {
         </div>
 
         {/* Orders */}
-        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div>
-              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Orders</h3>
-              <p className="text-xs text-[#7B5A48] mt-1">Update status · delete old ones to keep it tidy</p>
+              <h3 className="font-serif text-xl font-bold text-[#212121]">Orders</h3>
+              <p className="text-xs text-[#616161] mt-1">Update status · delete old ones to keep it tidy</p>
             </div>
             <button
               onClick={bulkDeleteDelivered}
-              className="px-4 py-2 rounded-full border border-[#EADFCF] hover:border-[#B93826] text-sm text-[#3B2416] flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full border border-[#E0E0E0] hover:border-[#D32F2F] text-sm text-[#212121] flex items-center gap-1.5"
             >
               <Trash2 className="w-4 h-4" /> Clean up (delivered + cancelled)
             </button>
           </div>
 
           {orders.length === 0 ? (
-            <div className="text-center py-10 text-[#7B5A48] text-sm">No orders yet.</div>
+            <div className="text-center py-10 text-[#616161] text-sm">No orders yet.</div>
           ) : (
             <ul className="space-y-3">
               {orders.map((o) => (
-                <li key={o.id} className="border border-[#EADFCF] rounded-xl p-4">
+                <li key={o.id} className="border border-[#E0E0E0] rounded-xl p-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <div className="font-semibold text-[#2A1A14]">
+                      <div className="font-semibold text-[#212121]">
                         {o.customer_name}
-                        <span className="text-xs text-[#7B5A48] ml-2 font-normal">· {o.customer_phone}</span>
+                        <span className="text-xs text-[#616161] ml-2 font-normal">· {o.customer_phone}</span>
                       </div>
-                      <div className="text-xs text-[#7B5A48]">
+                      <div className="text-xs text-[#616161]">
                         {new Date(o.created_at).toLocaleString('en-IN')} · {o.upi_txn_ref ? `✅ ${o.upi_txn_ref.slice(0, 18)}` : 'unpaid'}
                       </div>
                     </div>
-                    <div className="font-serif font-bold text-[#B93826] text-lg">₹{Number(o.total_amount).toFixed(0)}</div>
+                    <div className="font-serif font-bold text-[#D32F2F] text-lg">₹{Number(o.total_amount).toFixed(0)}</div>
                   </div>
-                  <div className="mt-2 text-xs text-[#3B2416]">
+                  <div className="mt-2 text-xs text-[#212121]">
                     {Array.isArray(o.items) && o.items.map((i, idx) => (
                       <span key={idx} className="mr-2">{i.name} × {i.qty}kg</span>
                     ))}
                   </div>
-                  {o.customer_address && <div className="text-xs text-[#7B5A48] mt-1">📍 {o.customer_address}</div>}
+                  {o.customer_address && <div className="text-xs text-[#616161] mt-1">📍 {o.customer_address}</div>}
                   {o.delivery_slot_label && (
-                    <div className="text-xs text-[#B93826] font-semibold mt-1 inline-flex items-center gap-1 bg-[#FFF7DA] border border-[#F0DC8A] px-2 py-0.5 rounded-full">
+                    <div className="text-xs text-[#D32F2F] font-semibold mt-1 inline-flex items-center gap-1 bg-[#FFF7DA] border border-[#F0DC8A] px-2 py-0.5 rounded-full">
                       <Clock className="w-3 h-3" />
                       {o.delivery_slot_date} · {o.delivery_slot_label}
                     </div>
@@ -727,7 +727,7 @@ const Admin = () => {
                       href={`https://maps.google.com/?q=${o.delivery_lat},${o.delivery_lng}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-[#B93826] underline"
+                      className="text-xs text-[#D32F2F] underline"
                     >
                       View location on map
                     </a>
@@ -739,8 +739,8 @@ const Admin = () => {
                         onClick={() => updateOrderStatus(o.id, s)}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                           o.payment_status === s
-                            ? 'bg-[#B93826] text-white border-[#B93826]'
-                            : 'bg-white border-[#EADFCF] text-[#3B2416] hover:border-[#B93826]/40'
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F]'
+                            : 'bg-white border-[#E0E0E0] text-[#212121] hover:border-[#D32F2F]/40'
                         }`}
                       >
                         {s.replace(/_/g, ' ')}
@@ -748,7 +748,7 @@ const Admin = () => {
                     ))}
                     <button
                       onClick={() => deleteOrder(o.id)}
-                      className="text-xs px-3 py-1 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826] ml-auto"
+                      className="text-xs px-3 py-1 rounded-full text-[#616161] hover:text-white hover:bg-[#D32F2F] ml-auto"
                     >
                       <Trash2 className="w-3.5 h-3.5 inline" /> Delete
                     </button>
@@ -760,15 +760,15 @@ const Admin = () => {
         </div>
 
         {/* Reviews moderation */}
-        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-reviews-panel">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6 mt-6" data-testid="admin-reviews-panel">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-[#B93826]" />
+              <div className="w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-[#D32F2F]" />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Customer Reviews</h3>
-                <p className="text-xs text-[#7B5A48] mt-1">
+                <h3 className="font-serif text-xl font-bold text-[#212121]">Customer Reviews</h3>
+                <p className="text-xs text-[#616161] mt-1">
                   Approve to publish on home page · {reviews.filter((r) => !r.is_approved).length} pending ·{' '}
                   {reviews.filter((r) => r.is_approved).length} live
                 </p>
@@ -777,7 +777,7 @@ const Admin = () => {
           </div>
 
           {reviews.length === 0 ? (
-            <div className="text-center py-10 text-[#7B5A48] text-sm">
+            <div className="text-center py-10 text-[#616161] text-sm">
               No reviews yet. They'll show up here when customers submit them.
             </div>
           ) : (
@@ -786,14 +786,14 @@ const Admin = () => {
                 <li
                   key={r.id}
                   className={`border rounded-xl p-4 ${
-                    r.is_approved ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#EADFCF] bg-[#FFF7DA]/30'
+                    r.is_approved ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#E0E0E0] bg-[#FFF7DA]/30'
                   }`}
                   data-testid={`admin-review-${r.id}`}
                 >
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <div className="font-semibold text-[#2A1A14]">{r.name}</div>
+                        <div className="font-semibold text-[#212121]">{r.name}</div>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map((i) => (
                             <Star
@@ -801,7 +801,7 @@ const Admin = () => {
                               className={`w-3.5 h-3.5 ${
                                 i <= (r.rating || 0)
                                   ? 'text-[#F5A623] fill-[#F5A623]'
-                                  : 'text-[#EADFCF]'
+                                  : 'text-[#E0E0E0]'
                               }`}
                             />
                           ))}
@@ -816,17 +816,17 @@ const Admin = () => {
                           {r.is_approved ? 'Live' : 'Pending'}
                         </span>
                       </div>
-                      <div className="text-xs text-[#7B5A48] mt-0.5">
+                      <div className="text-xs text-[#616161] mt-0.5">
                         {new Date(r.created_at).toLocaleString('en-IN')}
                         {r.phone ? ` · ${r.phone}` : ''}
                       </div>
-                      <p className="mt-2 text-sm text-[#3B2416] leading-relaxed">{r.comment}</p>
+                      <p className="mt-2 text-sm text-[#212121] leading-relaxed">{r.comment}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
                       {r.is_approved ? (
                         <button
                           onClick={() => setReviewApproved(r.id, false)}
-                          className="text-xs px-3 py-1.5 rounded-full border border-[#EADFCF] text-[#3B2416] hover:border-[#B93826]/40"
+                          className="text-xs px-3 py-1.5 rounded-full border border-[#E0E0E0] text-[#212121] hover:border-[#D32F2F]/40"
                           data-testid={`admin-review-hide-${r.id}`}
                         >
                           Hide
@@ -842,7 +842,7 @@ const Admin = () => {
                       )}
                       <button
                         onClick={() => deleteReview(r.id)}
-                        className="text-xs px-3 py-1.5 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                        className="text-xs px-3 py-1.5 rounded-full text-[#616161] hover:text-white hover:bg-[#D32F2F]"
                         data-testid={`admin-review-delete-${r.id}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -856,15 +856,15 @@ const Admin = () => {
         </div>
 
         {/* Coupon codes */}
-        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-coupons-panel">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6 mt-6" data-testid="admin-coupons-panel">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
-                <Tag className="w-5 h-5 text-[#B93826]" />
+              <div className="w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center">
+                <Tag className="w-5 h-5 text-[#D32F2F]" />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Coupon Codes</h3>
-                <p className="text-xs text-[#7B5A48] mt-1">
+                <h3 className="font-serif text-xl font-bold text-[#212121]">Coupon Codes</h3>
+                <p className="text-xs text-[#616161] mt-1">
                   Create discount codes. One use per phone number.
                 </p>
               </div>
@@ -872,26 +872,26 @@ const Admin = () => {
             <button
               onClick={() => setShowAddCoupon(true)}
               data-testid="admin-add-coupon-btn"
-              className="px-4 py-2 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" /> New coupon
             </button>
           </div>
 
           {showAddCoupon && (
-            <div className="border border-dashed border-[#B93826] rounded-xl p-4 mb-4 bg-[#FAF4EC]">
+            <div className="border border-dashed border-[#D32F2F] rounded-xl p-4 mb-4 bg-[#FFFFFF]">
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <input
                   placeholder="CODE (e.g. WELCOME20)"
                   value={newCoupon.code}
                   onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm font-mono uppercase tracking-wide"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm font-mono uppercase tracking-wide"
                   data-testid="admin-new-coupon-code"
                 />
                 <select
                   value={newCoupon.discount_type}
                   onChange={(e) => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm bg-white"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm bg-white"
                   data-testid="admin-new-coupon-type"
                 >
                   <option value="pct">% off</option>
@@ -902,7 +902,7 @@ const Admin = () => {
                   placeholder={newCoupon.discount_type === 'pct' ? '% (e.g. 20)' : '₹ off'}
                   value={newCoupon.discount_value}
                   onChange={(e) => setNewCoupon({ ...newCoupon, discount_value: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm"
                   data-testid="admin-new-coupon-value"
                 />
                 <input
@@ -910,7 +910,7 @@ const Admin = () => {
                   placeholder="Min order ₹ (optional)"
                   value={newCoupon.min_order_amount}
                   onChange={(e) => setNewCoupon({ ...newCoupon, min_order_amount: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm"
                   data-testid="admin-new-coupon-min"
                 />
                 <input
@@ -918,21 +918,21 @@ const Admin = () => {
                   placeholder="Expires (optional)"
                   value={newCoupon.valid_until}
                   onChange={(e) => setNewCoupon({ ...newCoupon, valid_until: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-[#EADFCF] text-sm"
+                  className="px-3 py-2 rounded-lg border border-[#E0E0E0] text-sm"
                   data-testid="admin-new-coupon-expiry"
                 />
               </div>
               <div className="mt-3 flex gap-2 justify-end">
                 <button
                   onClick={() => setShowAddCoupon(false)}
-                  className="px-4 py-1.5 rounded-full border border-[#EADFCF] text-sm"
+                  className="px-4 py-1.5 rounded-full border border-[#E0E0E0] text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={addCoupon}
                   data-testid="admin-save-coupon-btn"
-                  className="px-4 py-1.5 rounded-full bg-[#B93826] text-white text-sm"
+                  className="px-4 py-1.5 rounded-full bg-[#D32F2F] text-white text-sm"
                 >
                   Save coupon
                 </button>
@@ -941,31 +941,31 @@ const Admin = () => {
           )}
 
           {coupons.length === 0 ? (
-            <div className="text-center py-10 text-[#7B5A48] text-sm">
+            <div className="text-center py-10 text-[#616161] text-sm">
               No coupons yet. Click "New coupon" to create one.
             </div>
           ) : (
-            <ul className="divide-y divide-[#EADFCF]">
+            <ul className="divide-y divide-[#E0E0E0]">
               {coupons.map((c) => {
                 const expired =
                   c.valid_until && new Date(c.valid_until) < new Date();
                 return (
                   <li key={c.code} className="py-3 flex items-center flex-wrap gap-3">
-                    <div className="font-mono font-bold text-[#2A1A14] tracking-wide">{c.code}</div>
-                    <div className="text-sm text-[#3B2416]">
+                    <div className="font-mono font-bold text-[#212121] tracking-wide">{c.code}</div>
+                    <div className="text-sm text-[#212121]">
                       {c.discount_type === 'pct'
                         ? `${Number(c.discount_value)}% off`
                         : `₹${Number(c.discount_value)} off`}
                     </div>
                     {Number(c.min_order_amount) > 0 && (
-                      <div className="text-xs text-[#7B5A48]">
+                      <div className="text-xs text-[#616161]">
                         min ₹{Number(c.min_order_amount).toFixed(0)}
                       </div>
                     )}
                     {c.valid_until && (
                       <div
                         className={`text-xs ${
-                          expired ? 'text-[#B93826] font-semibold' : 'text-[#7B5A48]'
+                          expired ? 'text-[#D32F2F] font-semibold' : 'text-[#616161]'
                         }`}
                       >
                         {expired ? 'EXPIRED · ' : 'until '}
@@ -986,12 +986,12 @@ const Admin = () => {
                       {!c.is_active ? 'Disabled' : expired ? 'Expired' : 'Live'}
                     </span>
                     <div className="ml-auto flex items-center gap-2">
-                      <label className="flex items-center gap-2 text-xs text-[#7B5A48]">
+                      <label className="flex items-center gap-2 text-xs text-[#616161]">
                         <input
                           type="checkbox"
                           checked={c.is_active}
                           onChange={() => toggleCouponActive(c)}
-                          className="w-4 h-4 accent-[#B93826]"
+                          className="w-4 h-4 accent-[#D32F2F]"
                           data-testid={`admin-coupon-toggle-${c.code}`}
                         />
                         Active
@@ -999,7 +999,7 @@ const Admin = () => {
                       <button
                         onClick={() => deleteCoupon(c.code)}
                         data-testid={`admin-coupon-delete-${c.code}`}
-                        className="p-2 rounded-full text-[#7B5A48] hover:text-white hover:bg-[#B93826]"
+                        className="p-2 rounded-full text-[#616161] hover:text-white hover:bg-[#D32F2F]"
                         title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1013,14 +1013,14 @@ const Admin = () => {
         </div>
 
         {/* Delivery slot management — admin can disable specific slots */}
-        <div className="bg-white border border-[#EADFCF] rounded-2xl p-6 mt-6" data-testid="admin-slots-panel">
+        <div className="bg-white border border-[#E0E0E0] rounded-2xl p-6 mt-6" data-testid="admin-slots-panel">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-[#F4E4D1] flex items-center justify-center">
-              <Clock className="w-5 h-5 text-[#B93826]" />
+            <div className="w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center">
+              <Clock className="w-5 h-5 text-[#D32F2F]" />
             </div>
             <div>
-              <h3 className="font-serif text-xl font-bold text-[#2A1A14]">Delivery Slots</h3>
-              <p className="text-xs text-[#7B5A48] mt-1">
+              <h3 className="font-serif text-xl font-bold text-[#212121]">Delivery Slots</h3>
+              <p className="text-xs text-[#616161] mt-1">
                 Tap a slot to block it for that day (e.g. you're closed, or out of stock).
               </p>
             </div>
@@ -1041,7 +1041,7 @@ const Admin = () => {
             ];
             return (
               <div key={dateIso} className="mb-3">
-                <div className="text-xs font-semibold text-[#7B5A48] uppercase tracking-wider mb-2">
+                <div className="text-xs font-semibold text-[#616161] uppercase tracking-wider mb-2">
                   {dayOffset === 0 ? 'Today' : 'Tomorrow'} · {d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1058,15 +1058,15 @@ const Admin = () => {
                         data-testid={`admin-slot-${dateIso}-${s.start}`}
                         className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex flex-col items-center min-w-[88px] ${
                           isDisabled
-                            ? 'bg-[#FCEEEE] text-[#B93826] border-[#B93826] line-through'
+                            ? 'bg-[#FFEBEE] text-[#D32F2F] border-[#D32F2F] line-through'
                             : isFull
-                            ? 'bg-[#FFF1E0] text-[#B93826] border-[#B93826]'
-                            : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/40'
+                            ? 'bg-[#F5F5F5] text-[#D32F2F] border-[#D32F2F]'
+                            : 'bg-white text-[#212121] border-[#E0E0E0] hover:border-[#D32F2F]/40'
                         }`}
                       >
                         <span>{s.label}</span>
                         <span className={`text-[9px] mt-0.5 font-semibold ${
-                          isDisabled ? 'text-[#B93826]' : isFull ? 'text-[#B93826]' : 'text-[#7B5A48]'
+                          isDisabled ? 'text-[#D32F2F]' : isFull ? 'text-[#D32F2F]' : 'text-[#616161]'
                         }`}>
                           {booked}/10 booked{isFull ? ' · FULL' : ''}
                         </span>
@@ -1077,9 +1077,9 @@ const Admin = () => {
               </div>
             );
           })}
-          <p className="text-[11px] text-[#7B5A48] mt-3">
-            <span className="inline-block px-2 py-0.5 bg-[#FCEEEE] text-[#B93826] rounded mr-1">Red</span> = blocked from customers ·
-            <span className="inline-block px-2 py-0.5 bg-white border border-[#EADFCF] rounded ml-2">White</span> = open
+          <p className="text-[11px] text-[#616161] mt-3">
+            <span className="inline-block px-2 py-0.5 bg-[#FFEBEE] text-[#D32F2F] rounded mr-1">Red</span> = blocked from customers ·
+            <span className="inline-block px-2 py-0.5 bg-white border border-[#E0E0E0] rounded ml-2">White</span> = open
           </p>
         </div>
       </section>

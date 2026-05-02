@@ -71,14 +71,14 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
       data-testid="review-dialog"
     >
       <div
-        className="bg-[#FAF4EC] rounded-2xl w-full max-w-md shadow-2xl border border-[#EADFCF] overflow-hidden"
+        className="bg-[#FFFFFF] rounded-2xl w-full max-w-md shadow-2xl border border-[#E0E0E0] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EADFCF]">
-          <h3 className="font-serif text-xl font-bold text-[#2A1A14]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0]">
+          <h3 className="font-serif text-xl font-bold text-[#212121]">
             {submitted ? 'Thank you!' : 'Leave a review'}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#EADFCF] text-[#3B2416]">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#E0E0E0] text-[#212121]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -88,17 +88,17 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
             <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
               <CheckCircle2 className="w-9 h-9 text-emerald-600" />
             </div>
-            <p className="mt-4 font-serif text-lg text-[#2A1A14]">Review submitted</p>
-            <p className="mt-1 text-sm text-[#7B5A48] max-w-xs">
+            <p className="mt-4 font-serif text-lg text-[#212121]">Review submitted</p>
+            <p className="mt-1 text-sm text-[#616161] max-w-xs">
               Your review will appear on the site once the shop owner approves it. Thanks for the feedback!
             </p>
 
             {rating >= 4 && (
               <div className="mt-5 w-full rounded-xl bg-[#FFF7DA] border border-[#F0DC8A] p-4">
-                <div className="text-sm font-semibold text-[#2A1A14]">
+                <div className="text-sm font-semibold text-[#212121]">
                   Loved your chicken? Tell a neighbour 🐔
                 </div>
-                <p className="text-xs text-[#7B5A48] mt-1">
+                <p className="text-xs text-[#616161] mt-1">
                   One quick share helps a small local shop more than any ad ever could.
                 </p>
                 <a
@@ -119,7 +119,7 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
             <button
               onClick={handleDone}
               data-testid="review-done-btn"
-              className="mt-5 w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium"
+              className="mt-5 w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-medium"
             >
               Done
             </button>
@@ -128,7 +128,7 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             {/* Star rating */}
             <div className="text-center">
-              <div className="text-xs font-medium text-[#7B5A48] mb-2">How was your meat?</div>
+              <div className="text-xs font-medium text-[#616161] mb-2">How was your meat?</div>
               <div
                 className="inline-flex gap-1 select-none"
                 onMouseLeave={() => setHover(0)}
@@ -147,7 +147,7 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
                     >
                       <Star
                         className={`w-9 h-9 ${
-                          filled ? 'text-[#F5A623] fill-[#F5A623]' : 'text-[#EADFCF]'
+                          filled ? 'text-[#F5A623] fill-[#F5A623]' : 'text-[#E0E0E0]'
                         }`}
                       />
                     </button>
@@ -155,48 +155,48 @@ const ReviewDialog = ({ open, onClose, orderId = null, prefillName = '', phone =
                 })}
               </div>
               {rating > 0 && (
-                <div className="text-xs text-[#7B5A48] mt-1">
+                <div className="text-xs text-[#616161] mt-1">
                   {['', 'Awful', 'Not great', 'Okay', 'Good', 'Excellent'][rating]}
                 </div>
               )}
             </div>
 
             <div>
-              <label className="text-xs font-medium text-[#7B5A48]">Your name *</label>
+              <label className="text-xs font-medium text-[#616161]">Your name *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 placeholder="What should we call you?"
                 data-testid="review-name-input"
               />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-[#7B5A48]">Comment *</label>
+              <label className="text-xs font-medium text-[#616161]">Comment *</label>
               <textarea
                 rows={4}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 maxLength={600}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm resize-none"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm resize-none"
                 placeholder="Was the chicken fresh? On time? Friendly delivery?"
                 data-testid="review-comment-input"
               />
-              <div className="text-[10px] text-[#7B5A48] mt-1 text-right">{comment.length}/600</div>
+              <div className="text-[10px] text-[#616161] mt-1 text-right">{comment.length}/600</div>
             </div>
 
             <button
               type="submit"
               disabled={submitting}
               data-testid="review-submit-btn"
-              className="w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4 fill-white" />}
               Submit review
             </button>
-            <p className="text-[11px] text-center text-[#7B5A48]">
+            <p className="text-[11px] text-center text-[#616161]">
               Reviews appear after the shop owner approves them.
             </p>
           </form>

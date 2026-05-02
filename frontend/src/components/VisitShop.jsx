@@ -34,13 +34,13 @@ const VisitShop = () => {
   const waHref = e164 ? `https://wa.me/${e164}?text=${encodeURIComponent(waMsg)}` : '#';
 
   return (
-    <section id="visit" className="bg-[#FAF4EC] py-12 md:py-20" data-testid="visit-shop-section">
+    <section id="visit" className="bg-[#F5F5F5] py-12 md:py-20" data-testid="visit-shop-section">
       <div className="max-w-6xl mx-auto px-5 md:px-8">
         <div className="text-center mb-8 md:mb-10">
-          <div className="text-[11px] tracking-[0.25em] font-semibold text-[#B93826]">
+          <div className="text-[11px] tracking-[0.25em] font-bold text-[#D32F2F]">
             {t('visit.eyebrow')}
           </div>
-          <h2 className="mt-2 font-serif text-4xl md:text-5xl text-[#2A1A14]">
+          <h2 className="mt-2 font-bold text-3xl md:text-4xl text-[#212121] tracking-tight">
             {t('visit.title')}
           </h2>
         </div>
@@ -51,7 +51,7 @@ const VisitShop = () => {
             href={mapsHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative block rounded-2xl overflow-hidden border-2 border-[#EADFCF] shadow-sm hover:shadow-md transition-shadow"
+            className="group relative block rounded-xl overflow-hidden border border-[#E0E0E0] shadow-sm hover:shadow-md transition-shadow"
             data-testid="visit-map-link"
             aria-label="Open in Google Maps"
           >
@@ -67,35 +67,35 @@ const VisitShop = () => {
               <span className="text-white text-xs font-medium drop-shadow">
                 {t('visit.tap_for_map')}
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-white text-[#B93826] text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm group-hover:bg-[#B93826] group-hover:text-white transition-colors">
+              <span className="inline-flex items-center gap-1.5 bg-white text-[#D32F2F] text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm group-hover:bg-[#D32F2F] group-hover:text-white transition-colors">
                 <Navigation className="w-3.5 h-3.5" /> {t('visit.directions')}
               </span>
             </div>
           </a>
 
           {/* Info card */}
-          <div className="rounded-2xl bg-white border border-[#EADFCF] p-6 md:p-8 flex flex-col">
+          <div className="rounded-xl bg-white border border-[#E0E0E0] p-6 md:p-8 flex flex-col">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#B93826]/10 flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-[#B93826]" />
+              <div className="w-10 h-10 rounded-lg bg-[#FFEBEE] flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-[#D32F2F]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-serif text-xl md:text-2xl font-bold text-[#2A1A14] leading-tight">
+                <div className="font-bold text-xl md:text-2xl text-[#212121] leading-tight">
                   {shop.shop_name}
                 </div>
-                <p className="mt-1 text-sm text-[#3B2416] leading-relaxed">
+                <p className="mt-1 text-sm text-[#212121] leading-relaxed">
                   {shop.address}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 flex items-center gap-3 text-sm text-[#3B2416]">
-              <div className="w-10 h-10 rounded-full bg-[#F3EADB] flex items-center justify-center shrink-0">
-                <Clock className="w-4 h-4 text-[#7B5A48]" />
+            <div className="mt-5 flex items-center gap-3 text-sm text-[#212121]">
+              <div className="w-10 h-10 rounded-lg bg-[#F5F5F5] flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-[#616161]" />
               </div>
               <div>
-                <div className="text-xs text-[#7B5A48]">{t('visit.hours_label')}</div>
-                <div className="font-medium">{t('visit.hours_value')}</div>
+                <div className="text-xs text-[#616161]">{t('visit.hours_label')}</div>
+                <div className="font-semibold">{t('visit.hours_value')}</div>
               </div>
             </div>
 
@@ -103,7 +103,7 @@ const VisitShop = () => {
               <a
                 href={telHref}
                 data-testid="visit-call-btn"
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] active:scale-95 text-white font-medium shadow-sm transition-all"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-95 text-white font-semibold shadow-sm transition-all"
               >
                 <Phone className="w-4 h-4" /> {t('visit.call')}
               </a>
@@ -112,7 +112,7 @@ const VisitShop = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="visit-wa-btn"
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 text-white font-medium shadow-sm transition-all"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 text-white font-semibold shadow-sm transition-all"
               >
                 <MessageCircle className="w-4 h-4" /> WhatsApp
               </a>

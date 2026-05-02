@@ -23,7 +23,7 @@ const QuantitySelector = ({
 
   return (
     <div data-testid={`${testIdPrefix}-${product.id}`}>
-      <div className="text-[10px] tracking-[0.2em] font-semibold text-[#7B5A48] mb-2">
+      <div className="text-[10px] tracking-[0.2em] font-semibold text-[#616161] mb-2">
         CHOOSE QUANTITY
       </div>
       <div
@@ -43,8 +43,8 @@ const QuantitySelector = ({
               onClick={() => onChange(opt.value)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 active
-                  ? 'bg-[#B93826] text-white border-[#B93826] shadow-sm'
-                  : 'bg-white text-[#3B2416] border-[#EADFCF] hover:border-[#B93826]/50'
+                  ? 'bg-[#D32F2F] text-white border-[#D32F2F] shadow-sm'
+                  : 'bg-white text-[#212121] border-[#E0E0E0] hover:border-[#D32F2F]/50'
               }`}
             >
               {opt.label}
@@ -53,10 +53,10 @@ const QuantitySelector = ({
         })}
       </div>
       {showSubtotal && (
-        <div className="mt-2 text-xs text-[#3B2416]">
-          <span className="text-[#7B5A48]">{formatQty(value, unit)} = </span>
+        <div className="mt-2 text-xs text-[#212121]">
+          <span className="text-[#616161]">{formatQty(value, unit)} = </span>
           <span
-            className="font-bold text-[#2A1A14]"
+            className="font-bold text-[#212121]"
             data-testid={`${testIdPrefix}-subtotal-${product.id}`}
           >
             ₹{calcSubtotal(product.price, value)}

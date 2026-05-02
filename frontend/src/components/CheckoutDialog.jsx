@@ -384,7 +384,7 @@ const CheckoutDialog = ({ open, onClose }) => {
           email: `${form.phone}@chickencrew.shop`, // Razorpay requires email; synthesize from phone
           method: 'upi',
         },
-        theme: { color: '#B93826' },
+        theme: { color: '#D32F2F' },
         // Force-show UPI block + Cards/Wallets/Netbanking
         method: { upi: true, card: true, wallet: true, netbanking: true },
         // On Android, prefer UPI Intent flow (opens GPay/PhonePe/etc directly)
@@ -456,14 +456,14 @@ const CheckoutDialog = ({ open, onClose }) => {
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-[#FAF4EC] rounded-2xl w-full max-w-md shadow-2xl border border-[#EADFCF] overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-[#FFFFFF] rounded-2xl w-full max-w-md shadow-2xl border border-[#E0E0E0] overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EADFCF] sticky top-0 bg-[#FAF4EC]">
-          <h3 className="font-serif text-xl font-bold text-[#2A1A14]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0] sticky top-0 bg-[#FFFFFF]">
+          <h3 className="font-serif text-xl font-bold text-[#212121]">
             {step === 'success' ? 'Order Confirmed' : 'Checkout'}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#EADFCF] text-[#3B2416]">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#E0E0E0] text-[#212121]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -471,30 +471,30 @@ const CheckoutDialog = ({ open, onClose }) => {
         {step === 'form' && (
           <form onSubmit={handlePay} className="p-5 space-y-4">
             <div>
-              <label className="text-xs font-medium text-[#7B5A48]">Full Name *</label>
+              <label className="text-xs font-medium text-[#616161]">Full Name *</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 placeholder="Your name"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#7B5A48]">Phone *</label>
+              <label className="text-xs font-medium text-[#616161]">Phone *</label>
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm"
                 placeholder="10-digit mobile"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#7B5A48] flex items-center gap-2">
+              <label className="text-xs font-medium text-[#616161] flex items-center gap-2">
                 Delivery Address
                 {profileLookup === 'loading' && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-[#7B5A48]">
+                  <span className="inline-flex items-center gap-1 text-[10px] text-[#616161]">
                     <Loader2 className="w-3 h-3 animate-spin" /> looking up…
                   </span>
                 )}
@@ -511,18 +511,18 @@ const CheckoutDialog = ({ open, onClose }) => {
                 rows={2}
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm resize-none"
+                className="mt-1 w-full px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm resize-none"
                 placeholder="House/Flat, Street, Landmark"
                 data-testid="checkout-address-input"
               />
             </div>
 
-            <div className="rounded-xl border-2 border-dashed border-[#B93826]/40 bg-[#B93826]/5 p-4">
+            <div className="rounded-xl border-2 border-dashed border-[#D32F2F]/40 bg-[#D32F2F]/5 p-4">
               <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-[#B93826] mt-0.5 shrink-0" />
+                <MapPin className="w-4 h-4 text-[#D32F2F] mt-0.5 shrink-0" />
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-[#2A1A14]">Share live location</div>
-                  <div className="text-xs text-[#7B5A48] mt-0.5">
+                  <div className="text-sm font-semibold text-[#212121]">Share live location</div>
+                  <div className="text-xs text-[#616161] mt-0.5">
                     Your browser will ask for permission. Rider uses this to reach you faster.
                   </div>
                 </div>
@@ -535,8 +535,8 @@ const CheckoutDialog = ({ open, onClose }) => {
                   location
                     ? 'bg-emerald-600 text-white'
                     : geoStatus === 'error'
-                    ? 'bg-white border border-[#B93826] text-[#B93826]'
-                    : 'bg-[#B93826] hover:bg-[#A02E1F] text-white'
+                    ? 'bg-white border border-[#D32F2F] text-[#D32F2F]'
+                    : 'bg-[#D32F2F] hover:bg-[#B71C1C] text-white'
                 }`}
               >
                 {geoStatus === 'loading' ? (
@@ -558,7 +558,7 @@ const CheckoutDialog = ({ open, onClose }) => {
                 )}
               </button>
               {geoStatus === 'error' && (
-                <div className="mt-2 text-[11px] text-[#7B5A48] leading-relaxed">
+                <div className="mt-2 text-[11px] text-[#616161] leading-relaxed">
                   Blocked? Tap the 🔒 padlock icon in your browser's address bar → <b>Site settings</b> →{' '}
                   <b>Location</b> → <b>Allow</b>, then reload. Or just type the address above.
                 </div>
@@ -572,30 +572,30 @@ const CheckoutDialog = ({ open, onClose }) => {
                 className="rounded-xl bg-gradient-to-r from-[#FFF7DA] to-[#FFE7B0] border border-[#F0DC8A] p-4 flex items-start gap-3"
                 data-testid="first-order-discount-banner"
               >
-                <div className="shrink-0 w-9 h-9 rounded-full bg-[#B93826] text-white flex items-center justify-center">
+                <div className="shrink-0 w-9 h-9 rounded-full bg-[#D32F2F] text-white flex items-center justify-center">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-bold text-[#2A1A14]">
+                  <div className="text-sm font-bold text-[#212121]">
                     🎉 First order — {FIRST_ORDER_DISCOUNT_PCT}% off applied!
                   </div>
-                  <div className="text-xs text-[#7B5A48] mt-0.5">
-                    You're saving <b className="text-[#B93826]">₹{discount.toFixed(0)}</b> on this order. Welcome to ChickenCrew!
+                  <div className="text-xs text-[#616161] mt-0.5">
+                    You're saving <b className="text-[#D32F2F]">₹{discount.toFixed(0)}</b> on this order. Welcome to ChickenCrew!
                   </div>
                 </div>
               </div>
             )}
 
             {/* Coupon code — collapsible */}
-            <div className="rounded-xl border border-[#EADFCF] bg-white overflow-hidden">
+            <div className="rounded-xl border border-[#E0E0E0] bg-white overflow-hidden">
               <button
                 type="button"
                 onClick={() => setCouponOpen((v) => !v)}
                 data-testid="coupon-toggle-btn"
-                className="w-full px-4 py-3 flex items-center justify-between text-sm text-[#3B2416] hover:bg-[#FAF4EC] transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between text-sm text-[#212121] hover:bg-[#FFFFFF] transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-[#B93826]" />
+                  <Tag className="w-4 h-4 text-[#D32F2F]" />
                   {coupon ? (
                     <span className="font-semibold text-emerald-700">
                       Coupon <span className="font-mono">{coupon.code}</span> applied · −₹
@@ -605,13 +605,13 @@ const CheckoutDialog = ({ open, onClose }) => {
                     <span className="font-medium">Have a coupon code?</span>
                   )}
                 </span>
-                {couponOpen ? <ChevronUp className="w-4 h-4 text-[#7B5A48]" /> : <ChevronDown className="w-4 h-4 text-[#7B5A48]" />}
+                {couponOpen ? <ChevronUp className="w-4 h-4 text-[#616161]" /> : <ChevronDown className="w-4 h-4 text-[#616161]" />}
               </button>
               {couponOpen && (
-                <div className="px-4 pb-4 pt-1 border-t border-[#EADFCF] bg-[#FAF4EC]">
+                <div className="px-4 pb-4 pt-1 border-t border-[#E0E0E0] bg-[#FFFFFF]">
                   {coupon ? (
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs text-[#7B5A48]">
+                      <div className="text-xs text-[#616161]">
                         {useCoupon ? (
                           <>Coupon discount applied (better than first-order offer).</>
                         ) : (
@@ -622,7 +622,7 @@ const CheckoutDialog = ({ open, onClose }) => {
                         type="button"
                         onClick={removeCoupon}
                         data-testid="coupon-remove-btn"
-                        className="text-xs px-3 py-1 rounded-full border border-[#EADFCF] hover:border-[#B93826]/40 text-[#3B2416]"
+                        className="text-xs px-3 py-1 rounded-full border border-[#E0E0E0] hover:border-[#D32F2F]/40 text-[#212121]"
                       >
                         Remove
                       </button>
@@ -641,7 +641,7 @@ const CheckoutDialog = ({ open, onClose }) => {
                             }
                           }}
                           placeholder="e.g. WELCOME20"
-                          className="flex-1 px-3 py-2.5 rounded-lg border border-[#EADFCF] bg-white focus:outline-none focus:border-[#B93826] text-sm font-mono uppercase tracking-wide"
+                          className="flex-1 px-3 py-2.5 rounded-lg border border-[#E0E0E0] bg-white focus:outline-none focus:border-[#D32F2F] text-sm font-mono uppercase tracking-wide"
                           data-testid="coupon-input"
                         />
                         <button
@@ -649,13 +649,13 @@ const CheckoutDialog = ({ open, onClose }) => {
                           onClick={applyCoupon}
                           disabled={couponChecking || !couponInput.trim()}
                           data-testid="coupon-apply-btn"
-                          className="px-4 py-2.5 rounded-lg bg-[#B93826] hover:bg-[#A02E1F] text-white text-sm font-medium disabled:opacity-60 flex items-center gap-1.5"
+                          className="px-4 py-2.5 rounded-lg bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-sm font-medium disabled:opacity-60 flex items-center gap-1.5"
                         >
                           {couponChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
                         </button>
                       </div>
                       {couponError && (
-                        <div className="mt-2 text-xs text-[#B93826]" data-testid="coupon-error">
+                        <div className="mt-2 text-xs text-[#D32F2F]" data-testid="coupon-error">
                           {couponError}
                         </div>
                       )}
@@ -665,9 +665,9 @@ const CheckoutDialog = ({ open, onClose }) => {
               )}
             </div>
 
-            <div className="rounded-xl bg-[#F3EADB] p-4">
-              <div className="text-xs text-[#7B5A48] mb-2">Order summary</div>
-              <ul className="space-y-1 text-sm text-[#3B2416]">
+            <div className="rounded-xl bg-[#F5F5F5] p-4">
+              <div className="text-xs text-[#616161] mb-2">Order summary</div>
+              <ul className="space-y-1 text-sm text-[#212121]">
                 {items.map((i) => (
                   <li key={i.id} className="flex justify-between">
                     <span>{i.name} × {i.qty} kg</span>
@@ -677,7 +677,7 @@ const CheckoutDialog = ({ open, onClose }) => {
               </ul>
               {discount > 0 && (
                 <>
-                  <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between text-sm text-[#3B2416]">
+                  <div className="border-t border-[#E0E0E0] mt-2 pt-2 flex justify-between text-sm text-[#212121]">
                     <span>Subtotal</span>
                     <span>₹{subtotal.toFixed(0)}</span>
                   </div>
@@ -697,41 +697,41 @@ const CheckoutDialog = ({ open, onClose }) => {
               {/* Delivery fee line — always shown so customers know the policy */}
               <div
                 className={`flex justify-between text-sm ${
-                  discount > 0 ? '' : 'border-t border-[#EADFCF] mt-2 pt-2'
+                  discount > 0 ? '' : 'border-t border-[#E0E0E0] mt-2 pt-2'
                 }`}
                 data-testid="delivery-fee-line"
               >
-                <span className="text-[#3B2416]">Delivery fee</span>
+                <span className="text-[#212121]">Delivery fee</span>
                 {deliveryFee === 0 ? (
                   <span className="text-emerald-700 font-semibold">FREE</span>
                 ) : (
-                  <span className="text-[#3B2416]">+ ₹{deliveryFee}</span>
+                  <span className="text-[#212121]">+ ₹{deliveryFee}</span>
                 )}
               </div>
               {amountToFreeDelivery > 0 && (
                 <div
-                  className="mt-2 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 text-[11px] text-[#5C3A14]"
+                  className="mt-2 rounded-lg bg-[#FFF7DA] border border-[#F0DC8A] px-3 py-2 text-[11px] text-[#212121]"
                   data-testid="free-delivery-hint"
                 >
                   Add <b>₹{amountToFreeDelivery.toFixed(0)} more</b> to your cart and delivery becomes <b>FREE</b>.
                 </div>
               )}
-              <div className="border-t border-[#EADFCF] mt-2 pt-2 flex justify-between font-semibold text-[#2A1A14]">
+              <div className="border-t border-[#E0E0E0] mt-2 pt-2 flex justify-between font-semibold text-[#212121]">
                 <span>Total</span>
                 <span data-testid="checkout-final-total">₹{finalTotal.toFixed(0)}</span>
               </div>
             </div>
 
             <div>
-              <div className="text-xs font-medium text-[#7B5A48] mb-2">Payment method</div>
+              <div className="text-xs font-medium text-[#616161] mb-2">Payment method</div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('online')}
                   className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-sm transition-colors ${
                     paymentMethod === 'online'
-                      ? 'border-[#B93826] bg-[#B93826]/5 text-[#B93826]'
-                      : 'border-[#EADFCF] bg-white text-[#3B2416]'
+                      ? 'border-[#D32F2F] bg-[#D32F2F]/5 text-[#D32F2F]'
+                      : 'border-[#E0E0E0] bg-white text-[#212121]'
                   }`}
                 >
                   <Smartphone className="w-4 h-4" />
@@ -745,8 +745,8 @@ const CheckoutDialog = ({ open, onClose }) => {
                   onClick={() => setPaymentMethod('cod')}
                   className={`flex items-center gap-2 px-3 py-3 rounded-lg border text-sm transition-colors ${
                     paymentMethod === 'cod'
-                      ? 'border-[#B93826] bg-[#B93826]/5 text-[#B93826]'
-                      : 'border-[#EADFCF] bg-white text-[#3B2416]'
+                      ? 'border-[#D32F2F] bg-[#D32F2F]/5 text-[#D32F2F]'
+                      : 'border-[#E0E0E0] bg-white text-[#212121]'
                   }`}
                 >
                   <Banknote className="w-4 h-4" />
@@ -760,7 +760,7 @@ const CheckoutDialog = ({ open, onClose }) => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-full bg-[#B93826] hover:bg-[#A02E1F] text-white font-medium flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] text-white font-medium flex items-center justify-center gap-2"
             >
               {paymentMethod === 'cod' ? (
                 <>
@@ -772,7 +772,7 @@ const CheckoutDialog = ({ open, onClose }) => {
                 </>
               )}
             </button>
-            <p className="text-[11px] text-center text-[#7B5A48]">
+            <p className="text-[11px] text-center text-[#616161]">
               {paymentMethod === 'cod'
                 ? 'Rider will collect cash when delivering.'
                 : 'UPI / Cards / Wallets · Secured by Razorpay'}
@@ -782,9 +782,9 @@ const CheckoutDialog = ({ open, onClose }) => {
 
         {step === 'paying' && (
           <div className="p-10 flex flex-col items-center">
-            <Loader2 className="w-12 h-12 text-[#B93826] animate-spin" />
-            <p className="mt-5 font-serif text-lg text-[#2A1A14]">Opening payment…</p>
-            <p className="text-xs text-[#7B5A48]">Complete the payment in the Razorpay window.</p>
+            <Loader2 className="w-12 h-12 text-[#D32F2F] animate-spin" />
+            <p className="mt-5 font-serif text-lg text-[#212121]">Opening payment…</p>
+            <p className="text-xs text-[#616161]">Complete the payment in the Razorpay window.</p>
           </div>
         )}
 
