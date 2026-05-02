@@ -6,9 +6,24 @@ const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL || 'https://karthik-chicken-app.preview.emergentagent.com';
 export const API = `${BACKEND_URL}/api`;
 
+// withCredentials: true so the httpOnly session_token cookie set by the
+// backend after Google sign-in is sent on every customer-API call.
 export const api = axios.create({
   baseURL: API,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+});
+
+// Capacitor WebView and some private-mode browsers strip third-party cookies.
+// Fallback: if `cc_session_token` is in localStorage, send it as Bearer token.
+api.interceptors.request.use((config) => {
+  try {
+    const tok = localStorage.getItem('cc_session_token');
+    if (tok && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${tok}`;
+    }
+  } catch (_) {}
+  return config;
 });
 
 // Loads Razorpay checkout script on demand

@@ -5,15 +5,19 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { I18nProvider } from './lib/i18n';
 import Home from './pages/Home';
 import { Toaster } from './components/ui/toaster';
 
-// Code-split the admin / rider / auth pages — only loaded on demand.
+// Code-split the admin / rider / auth / profile / orders pages
 const Admin = lazy(() => import('./pages/Admin'));
 const Rider = lazy(() => import('./pages/Rider'));
 const Auth = lazy(() => import('./pages/Auth'));
 const RequireAdmin = lazy(() => import('./components/RequireAdmin'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Orders = lazy(() => import('./pages/Orders'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 
 // Code-split non-critical UI (floating buttons, offline gate, install prompt)
 // so they don't delay the LCP / TTI on the home page.
@@ -61,51 +65,77 @@ function App() {
     <div className="App">
       <I18nProvider>
         <AuthProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <ScrollToHash />
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route
-                  path="/auth"
-                  element={
-                    <Suspense fallback={<RouteFallback />}>
-                      <Auth />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <Suspense fallback={<RouteFallback />}>
-                      <RequireAdmin>
-                        <Admin />
-                      </RequireAdmin>
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/rider"
-                  element={
-                    <Suspense fallback={<RouteFallback />}>
-                      <Rider />
-                    </Suspense>
-                  }
-                />
-                {/* Legacy / direct-URL aliases -> home sections */}
-                <Route path="/shop" element={<Navigate to="/#shop" replace />} />
-                <Route path="/price" element={<Navigate to="/#price" replace />} />
-                {/* Catch-all: any unknown path goes home */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              <Suspense fallback={null}>
-                <InstallPrompt />
-                <OfflineGate />
-                <FloatingActions />
-              </Suspense>
-              <Toaster />
-            </BrowserRouter>
-          </CartProvider>
+          <CustomerAuthProvider>
+            <CartProvider>
+              <BrowserRouter>
+                <ScrollToHash />
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route
+                    path="/auth/callback"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <AuthCallback />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/auth"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Auth />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Profile />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/orders"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Orders />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <RequireAdmin>
+                          <Admin />
+                        </RequireAdmin>
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/rider"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Rider />
+                      </Suspense>
+                    }
+                  />
+                  {/* Legacy / direct-URL aliases -> home sections */}
+                  <Route path="/shop" element={<Navigate to="/#shop" replace />} />
+                  <Route path="/price" element={<Navigate to="/#price" replace />} />
+                  {/* Catch-all: any unknown path goes home */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+                <Suspense fallback={null}>
+                  <InstallPrompt />
+                  <OfflineGate />
+                  <FloatingActions />
+                </Suspense>
+                <Toaster />
+              </BrowserRouter>
+            </CartProvider>
+          </CustomerAuthProvider>
         </AuthProvider>
       </I18nProvider>
     </div>

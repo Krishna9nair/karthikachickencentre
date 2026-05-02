@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Languages, Download } from 'lucide-react';
+import { ShoppingCart, Languages, Download, User, ShoppingBag, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { useI18n } from '../lib/i18n';
 import useIsInstalledApp from '../lib/useIsInstalledApp';
 import InstallAppDialog from './InstallAppDialog';
@@ -11,9 +12,11 @@ const Navbar = () => {
   const { items, setIsOpen } = useCart();
   const itemCount = items.length;
   const { isAdmin } = useAuth();
+  const { user: customer, signIn, signOut } = useCustomerAuth();
   const { lang, setLang, t } = useI18n();
   const { pathname, hash } = useLocation();
   const [installOpen, setInstallOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   // Hide the "Get App" CTA when already running as an installed PWA / native APK.
   const installed = useIsInstalledApp();
 
@@ -96,6 +99,69 @@ const Navbar = () => {
             <span className="font-medium">{lang === 'en' ? 'EN' : 'हिं'}</span>
           </button>
 
+          {/* Customer account */}
+          {customer ? (
+            <div className="relative">
+              <button
+                onClick={() => setAccountOpen((v) => !v)}
+                onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
+                data-testid="navbar-account-btn"
+                aria-label="My account"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-[#E0E0E0] bg-white hover:border-[#D32F2F] transition-colors"
+              >
+                {customer.picture ? (
+                  <img src={customer.picture} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
+                ) : (
+                  <User className="w-5 h-5 text-[#D32F2F]" />
+                )}
+                <span className="hidden lg:inline text-sm font-medium text-[#212121] max-w-[120px] truncate">
+                  {customer.name?.split(' ')[0] || 'You'}
+                </span>
+              </button>
+              {accountOpen && (
+                <div
+                  data-testid="navbar-account-menu"
+                  className="absolute right-0 top-[calc(100%+6px)] w-56 bg-white border border-[#E0E0E0] rounded-lg shadow-lg overflow-hidden z-50"
+                >
+                  <div className="px-4 py-3 border-b border-[#F5F5F5]">
+                    <div className="text-sm font-bold text-[#212121] truncate">{customer.name || 'Welcome'}</div>
+                    <div className="text-xs text-[#616161] truncate">{customer.email}</div>
+                  </div>
+                  <Link
+                    to="/profile"
+                    data-testid="navbar-profile-link"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#212121] hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                  >
+                    <User className="w-4 h-4" /> My Profile
+                  </Link>
+                  <Link
+                    to="/orders"
+                    data-testid="navbar-orders-link"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#212121] hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                  >
+                    <ShoppingBag className="w-4 h-4" /> My Orders
+                  </Link>
+                  <button
+                    onMouseDown={(e) => { e.preventDefault(); signOut(); setAccountOpen(false); }}
+                    data-testid="navbar-signout-btn"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[#212121] hover:bg-[#FFEBEE] hover:text-[#D32F2F] border-t border-[#F5F5F5]"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => signIn('/profile')}
+              data-testid="navbar-signin-btn"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] hover:text-[#D32F2F] transition-colors"
+            >
+              <User className="w-4 h-4 text-[#D32F2F]" />
+              <span className="font-medium">Sign in</span>
+            </button>
+          )}
+
           {/* Cart */}
           <button
             onClick={() => setIsOpen(true)}
@@ -139,6 +205,24 @@ const Navbar = () => {
               {n.label}
             </Link>
           ))}
+          {/* Mobile sign-in / profile pill */}
+          {customer ? (
+            <Link
+              to="/profile"
+              data-testid="navbar-mobile-profile-link"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]"
+            >
+              <User className="w-3.5 h-3.5 text-[#D32F2F]" /> {customer.name?.split(' ')[0] || 'Account'}
+            </Link>
+          ) : (
+            <button
+              onClick={() => signIn('/profile')}
+              data-testid="navbar-mobile-signin-btn"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]"
+            >
+              <User className="w-3.5 h-3.5 text-[#D32F2F]" /> Sign in
+            </button>
+          )}
         </div>
       </nav>
 

@@ -13,7 +13,7 @@ import re
 import time
 import uuid
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Any, Dict
@@ -1143,6 +1143,431 @@ async def upload_product_image(
     except Exception as e:
         logging.exception("upload failed")
         raise HTTPException(500, f"Upload failed: {e}")
+
+
+# ----------------------- Customer Auth (Google via Emergent) -----------------------
+EMERGENT_AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+SESSION_COOKIE_NAME = "session_token"
+SESSION_TTL_DAYS = 7
+
+
+def _bearer_or_cookie(request: Request, authorization: Optional[str]) -> Optional[str]:
+    """Return the session token from cookie OR Authorization header."""
+    cookie_tok = request.cookies.get(SESSION_COOKIE_NAME)
+    if cookie_tok:
+        return cookie_tok
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1].strip() or None
+    return None
+
+
+def require_customer(request: Request, authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """FastAPI dependency: validates the customer session_token from cookie/header.
+    Returns the user_sessions row dict. Raises 401 if invalid/expired."""
+    token = _bearer_or_cookie(request, authorization)
+    if not token:
+        raise HTTPException(401, "Not signed in")
+    try:
+        res = sb.table("user_sessions").select(
+            "id, session_token, email, name, picture, phone, expires_at"
+        ).eq("session_token", token).limit(1).execute()
+        row = res.data[0] if res.data else None
+    except Exception as e:
+        logging.warning("session lookup failed: %s", e)
+        raise HTTPException(500, "Session lookup failed")
+    if not row:
+        raise HTTPException(401, "Invalid session")
+    # Validate expiry (Supabase returns ISO string)
+    expires_raw = row.get("expires_at")
+    try:
+        expires_at = datetime.fromisoformat(expires_raw.replace("Z", "+00:00")) \
+            if isinstance(expires_raw, str) else expires_raw
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+    except Exception:
+        raise HTTPException(401, "Session expired")
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(401, "Session expired")
+    # Touch last_seen_at (best-effort, don't fail the request)
+    try:
+        sb.table("user_sessions").update(
+            {"last_seen_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", row["id"]).execute()
+    except Exception:
+        pass
+    return row
+
+
+class GoogleSessionIn(BaseModel):
+    session_id: str = Field(..., min_length=10, max_length=200)
+
+
+@api_router.post("/auth/google/session")
+async def auth_google_session(payload: GoogleSessionIn, request: Request):
+    """Exchange Emergent Google `session_id` (URL fragment) for a server-issued
+    `session_token`. Sets an httpOnly cookie AND returns the token in JSON so
+    Capacitor WebView (no third-party cookies) can use the Authorization header.
+    """
+    # Call Emergent's session-data endpoint server-to-server (never from FE)
+    try:
+        import urllib.request
+        import json as _json
+        req = urllib.request.Request(
+            EMERGENT_AUTH_SESSION_URL,
+            headers={"X-Session-ID": payload.session_id},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        logging.warning("emergent session-data fetch failed: %s", e)
+        raise HTTPException(401, "Could not verify Google session")
+    email = (data or {}).get("email")
+    name = (data or {}).get("name") or ""
+    picture = (data or {}).get("picture") or ""
+    session_token = (data or {}).get("session_token")
+    if not email or not session_token:
+        raise HTTPException(401, "Invalid Google session payload")
+    expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)
+    # Look up existing phone link by email (so user doesn't relink each session)
+    linked_phone = None
+    try:
+        existing = sb.table("customer_profiles").select("phone").eq(
+            "email", email
+        ).limit(1).execute()
+        if existing.data:
+            linked_phone = existing.data[0].get("phone")
+    except Exception as e:
+        logging.warning("email->phone lookup failed: %s", e)
+    # Persist session row (upsert by session_token)
+    try:
+        sb.table("user_sessions").upsert({
+            "session_token": session_token,
+            "email": email,
+            "name": sanitize_text(name, 80),
+            "picture": picture[:500] if picture else None,
+            "phone": linked_phone,
+            "expires_at": expires_at.isoformat(),
+            "last_seen_at": datetime.now(timezone.utc).isoformat(),
+        }, on_conflict="session_token").execute()
+    except Exception as e:
+        logging.exception("session insert failed")
+        raise HTTPException(500, f"Session save failed: {e}")
+    response = JSONResponse({
+        "ok": True,
+        "user": {
+            "email": email,
+            "name": name,
+            "picture": picture,
+            "phone": linked_phone,
+        },
+        "session_token": session_token,
+    })
+    # httpOnly cookie for browser flows
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=session_token,
+        max_age=SESSION_TTL_DAYS * 24 * 3600,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
+    return response
+
+
+@api_router.get("/auth/me")
+async def auth_me(user=Depends(require_customer)):
+    return {
+        "email": user["email"],
+        "name": user.get("name"),
+        "picture": user.get("picture"),
+        "phone": user.get("phone"),
+    }
+
+
+@api_router.post("/auth/logout")
+async def auth_logout(request: Request, authorization: Optional[str] = Header(None)):
+    token = _bearer_or_cookie(request, authorization)
+    if token:
+        try:
+            sb.table("user_sessions").delete().eq("session_token", token).execute()
+        except Exception as e:
+            logging.warning("session delete failed: %s", e)
+    response = JSONResponse({"ok": True})
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/", samesite="none", secure=True)
+    return response
+
+
+# ----------------------- Customer profile + addresses + orders -----------------------
+class LinkPhoneIn(BaseModel):
+    phone: str = Field(..., min_length=10, max_length=15)
+
+
+@api_router.post("/customer/link-phone")
+async def link_phone(payload: LinkPhoneIn, request: Request, user=Depends(require_customer)):
+    """Link a 10-digit phone to the signed-in Google account.
+    Trust model (V1): no OTP. Cap to 1 email per phone and 1 phone per email
+    (uniqueness enforced by Postgres). Idempotent — same email→phone is a no-op.
+    """
+    phone = validate_indian_phone(payload.phone)
+    rate_limit(request, "profile_lookup", extra_key=user["email"])
+    # If already linked, just return current state
+    if user.get("phone") == phone:
+        return {"ok": True, "phone": phone, "already_linked": True}
+    # Refuse if this phone is already linked to a different email
+    try:
+        existing = sb.table("customer_profiles").select("email, phone, name").eq(
+            "phone", phone
+        ).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    existing_row = existing.data[0] if existing.data else None
+    if existing_row and existing_row.get("email") and existing_row.get("email") != user["email"]:
+        raise HTTPException(409, "This phone is already linked to a different account.")
+    # Refuse if this email is already linked to a different phone
+    try:
+        prior = sb.table("customer_profiles").select("phone").eq(
+            "email", user["email"]
+        ).limit(1).execute()
+        if prior.data and prior.data[0].get("phone") and prior.data[0].get("phone") != phone:
+            raise HTTPException(409, "Your account is already linked to a different phone.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    # Upsert profile row with email link
+    try:
+        if existing_row:
+            sb.table("customer_profiles").update({
+                "email": user["email"],
+                "name": existing_row.get("name") or user.get("name") or "",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("phone", phone).execute()
+        else:
+            sb.table("customer_profiles").upsert({
+                "phone": phone,
+                "name": user.get("name") or "",
+                "email": user["email"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }, on_conflict="phone").execute()
+    except Exception as e:
+        logging.exception("link-phone profile upsert failed")
+        raise HTTPException(500, f"Could not link phone: {e}")
+    # Update session row so subsequent calls have phone available
+    try:
+        sb.table("user_sessions").update({"phone": phone}).eq("id", user["id"]).execute()
+    except Exception as e:
+        logging.warning("session phone update failed: %s", e)
+    return {"ok": True, "phone": phone}
+
+
+@api_router.get("/customer/profile")
+async def customer_profile(user=Depends(require_customer)):
+    """Returns Google identity + linked phone + customer_profiles row (if linked)."""
+    profile = None
+    if user.get("phone"):
+        try:
+            res = sb.table("customer_profiles").select(
+                "phone, name, address, lat, lng, email, updated_at"
+            ).eq("phone", user["phone"]).limit(1).execute()
+            profile = res.data[0] if res.data else None
+        except Exception as e:
+            logging.warning("profile fetch failed: %s", e)
+    return {
+        "auth": {
+            "email": user["email"],
+            "name": user.get("name"),
+            "picture": user.get("picture"),
+            "phone": user.get("phone"),
+        },
+        "profile": profile,
+    }
+
+
+class UpdateProfileIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+
+
+@api_router.put("/customer/profile")
+async def update_profile(payload: UpdateProfileIn, user=Depends(require_customer)):
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    name = sanitize_text(payload.name, 80)
+    try:
+        sb.table("customer_profiles").update({
+            "name": name,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("phone", user["phone"]).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Update failed: {e}")
+    return {"ok": True, "name": name}
+
+
+# ----- Addresses -----
+class AddressIn(BaseModel):
+    label: str = Field("Home", min_length=1, max_length=20)
+    address: str = Field(..., min_length=5, max_length=400)
+    lat: Optional[float] = Field(None, ge=-90, le=90)
+    lng: Optional[float] = Field(None, ge=-180, le=180)
+    is_default: bool = False
+
+
+@api_router.get("/customer/addresses")
+async def list_addresses(user=Depends(require_customer)):
+    if not user.get("phone"):
+        return {"addresses": []}
+    try:
+        res = sb.table("customer_addresses").select(
+            "id, label, address, lat, lng, is_default, created_at"
+        ).eq("phone", user["phone"]).order("is_default", desc=True).order(
+            "created_at", desc=True
+        ).execute()
+        return {"addresses": res.data or []}
+    except Exception as e:
+        raise HTTPException(500, f"List failed: {e}")
+
+
+@api_router.post("/customer/addresses")
+async def create_address(payload: AddressIn, user=Depends(require_customer)):
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    try:
+        # If first address, force is_default = true
+        existing = sb.table("customer_addresses").select(
+            "id", count="exact"
+        ).eq("phone", user["phone"]).execute()
+        first = (existing.count or 0) == 0
+        row = {
+            "phone": user["phone"],
+            "label": sanitize_text(payload.label, 20),
+            "address": sanitize_text(payload.address, 400),
+            "lat": payload.lat,
+            "lng": payload.lng,
+            "is_default": True if first else payload.is_default,
+        }
+        ins = sb.table("customer_addresses").insert(row).execute()
+        return {"ok": True, "address": ins.data[0] if ins.data else None}
+    except Exception as e:
+        raise HTTPException(500, f"Create failed: {e}")
+
+
+@api_router.put("/customer/addresses/{address_id}")
+async def update_address(address_id: str, payload: AddressIn, user=Depends(require_customer)):
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    try:
+        # Ownership check
+        owner = sb.table("customer_addresses").select("id").eq(
+            "id", address_id
+        ).eq("phone", user["phone"]).limit(1).execute()
+        if not owner.data:
+            raise HTTPException(404, "Address not found")
+        sb.table("customer_addresses").update({
+            "label": sanitize_text(payload.label, 20),
+            "address": sanitize_text(payload.address, 400),
+            "lat": payload.lat,
+            "lng": payload.lng,
+            "is_default": payload.is_default,
+        }).eq("id", address_id).execute()
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Update failed: {e}")
+
+
+@api_router.delete("/customer/addresses/{address_id}")
+async def delete_address(address_id: str, user=Depends(require_customer)):
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    try:
+        owner = sb.table("customer_addresses").select("id, is_default").eq(
+            "id", address_id
+        ).eq("phone", user["phone"]).limit(1).execute()
+        if not owner.data:
+            raise HTTPException(404, "Address not found")
+        sb.table("customer_addresses").delete().eq("id", address_id).execute()
+        # If we deleted the default, promote the most recent remaining one
+        if owner.data[0].get("is_default"):
+            rem = sb.table("customer_addresses").select("id").eq(
+                "phone", user["phone"]
+            ).order("created_at", desc=True).limit(1).execute()
+            if rem.data:
+                sb.table("customer_addresses").update(
+                    {"is_default": True}
+                ).eq("id", rem.data[0]["id"]).execute()
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Delete failed: {e}")
+
+
+# ----- Orders (history + cancel + reorder) -----
+# Map UI status tabs → underlying order statuses
+ONGOING_STATUSES = {"cod_pending", "paid", "preparing", "out_for_delivery", "ready"}
+DELIVERED_STATUSES = {"delivered", "completed"}
+CANCELLED_STATUSES = {"cancelled", "canceled", "rejected"}
+
+
+@api_router.get("/customer/orders")
+async def customer_orders(status: Optional[str] = None, user=Depends(require_customer)):
+    """Returns orders for the linked phone, optionally filtered by tab status."""
+    if not user.get("phone"):
+        return {"orders": []}
+    try:
+        q = sb.table("orders").select(
+            "id, customer_name, customer_phone, customer_address, items, total_amount, "
+            "payment_status, notes, created_at, delivery_slot_date, delivery_slot_start, "
+            "delivery_slot_end, cancelled_at, cancelled_by"
+        ).eq("customer_phone", user["phone"]).order("created_at", desc=True).limit(50)
+        res = q.execute()
+        orders = res.data or []
+    except Exception as e:
+        raise HTTPException(500, f"List failed: {e}")
+    if status == "ongoing":
+        orders = [o for o in orders if (o.get("payment_status") or "").lower() in ONGOING_STATUSES]
+    elif status == "delivered":
+        orders = [o for o in orders if (o.get("payment_status") or "").lower() in DELIVERED_STATUSES]
+    elif status == "cancelled":
+        orders = [o for o in orders if (o.get("payment_status") or "").lower() in CANCELLED_STATUSES]
+    return {"orders": orders}
+
+
+class CancelOrderIn(BaseModel):
+    reason: Optional[str] = Field(None, max_length=200)
+
+
+@api_router.post("/customer/orders/{order_id}/cancel")
+async def cancel_order(order_id: str, payload: CancelOrderIn, user=Depends(require_customer)):
+    """Customer cancels their own pending order. Only `cod_pending` orders
+    that haven't been picked up yet can be cancelled."""
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    try:
+        res = sb.table("orders").select(
+            "id, customer_phone, payment_status"
+        ).eq("id", order_id).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    row = res.data[0] if res.data else None
+    if not row:
+        raise HTTPException(404, "Order not found")
+    if row.get("customer_phone") != user["phone"]:
+        raise HTTPException(403, "Not your order")
+    current = (row.get("payment_status") or "").lower()
+    if current not in {"cod_pending", "paid", "preparing", "ready"}:
+        raise HTTPException(400, f"Cannot cancel an order in status '{current}'")
+    try:
+        sb.table("orders").update({
+            "payment_status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancelled_by": "customer",
+            "cancel_reason": sanitize_text(payload.reason or "", 200) or None,
+        }).eq("id", order_id).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Cancel failed: {e}")
+    return {"ok": True}
 
 
 # ----------------------- Wire up -----------------------
