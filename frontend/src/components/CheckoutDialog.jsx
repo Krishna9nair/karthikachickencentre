@@ -789,20 +789,27 @@ const CheckoutDialog = ({ open, onClose }) => {
         )}
 
         {step === 'success' && orderSnapshot && (
-          <Bill
-            order={orderDetails}
-            items={orderSnapshot.items}
-            subtotal={orderSnapshot.subtotal}
-            customer={orderSnapshot.customer}
-            paymentMethod={paymentMethod}
-            grossSubtotal={orderSnapshot.grossSubtotal}
-            discount={orderSnapshot.discount}
-            firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
-            couponCode={orderSnapshot.couponCode}
-            deliverySlot={orderSnapshot.deliverySlot}
-            deliveryFee={orderSnapshot.deliveryFee}
-            onDone={handleDone}
-          />
+          <>
+            <SaveAddressPrompt
+              address={orderSnapshot.customer.address}
+              lat={location?.lat || null}
+              lng={location?.lng || null}
+            />
+            <Bill
+              order={orderDetails}
+              items={orderSnapshot.items}
+              subtotal={orderSnapshot.subtotal}
+              customer={orderSnapshot.customer}
+              paymentMethod={paymentMethod}
+              grossSubtotal={orderSnapshot.grossSubtotal}
+              discount={orderSnapshot.discount}
+              firstOrderDiscountApplied={orderSnapshot.firstOrderDiscountApplied}
+              couponCode={orderSnapshot.couponCode}
+              deliverySlot={orderSnapshot.deliverySlot}
+              deliveryFee={orderSnapshot.deliveryFee}
+              onDone={handleDone}
+            />
+          </>
         )}
       </div>
     </div>

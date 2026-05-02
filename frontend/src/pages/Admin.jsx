@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Upload, IndianRupee,
   ClipboardList, Package, TrendingUp, ImageIcon, Loader2, Store,
-  Star, MessageSquare, CheckCircle2, Tag, Clock,
+  Star, MessageSquare, CheckCircle2, Tag, Clock, RefreshCw,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -1018,12 +1018,72 @@ const Admin = () => {
             <div className="w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center">
               <Clock className="w-5 h-5 text-[#D32F2F]" />
             </div>
-            <div>
+            <div className="flex-1">
               <h3 className="font-serif text-xl font-bold text-[#212121]">Delivery Slots</h3>
               <p className="text-xs text-[#616161] mt-1">
                 Tap a slot to block it for that day (e.g. you're closed, or out of stock).
               </p>
             </div>
+            <button
+              onClick={loadSlotBookings}
+              aria-label="Refresh bookings"
+              data-testid="admin-slots-refresh-btn"
+              className="p-2 rounded-lg border border-[#E0E0E0] text-[#616161] hover:text-[#D32F2F] hover:border-[#D32F2F]"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Daily summary cards */}
+          <div className="grid grid-cols-2 gap-3 mb-5" data-testid="admin-slots-summary">
+            {[0, 1].map((dayOffset) => {
+              const d = new Date();
+              d.setHours(0, 0, 0, 0);
+              d.setDate(d.getDate() + dayOffset);
+              const dateIso = d.toISOString().slice(0, 10);
+              const SLOT_STARTS = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
+              const totalBooked = SLOT_STARTS.reduce(
+                (sum, s) => sum + (slotBookings[`${dateIso}|${s}`] || 0), 0
+              );
+              const totalCap = SLOT_STARTS.length * 10; // 60
+              const pct = totalCap > 0 ? Math.round((totalBooked / totalCap) * 100) : 0;
+              const fullSlots = SLOT_STARTS.filter(
+                (s) => (slotBookings[`${dateIso}|${s}`] || 0) >= 10
+              ).length;
+              const accent = pct >= 80 ? '#D32F2F' : pct >= 50 ? '#F57C00' : '#2E7D32';
+              return (
+                <div
+                  key={dateIso}
+                  data-testid={`admin-slot-summary-${dayOffset === 0 ? 'today' : 'tomorrow'}`}
+                  className="rounded-xl border border-[#E0E0E0] bg-[#F5F5F5] p-3"
+                >
+                  <div className="text-[10px] font-bold tracking-wider text-[#616161] uppercase">
+                    {dayOffset === 0 ? 'Today' : 'Tomorrow'}
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-bold" style={{ color: accent }}>
+                      {totalBooked}
+                    </span>
+                    <span className="text-sm text-[#616161]">/ {totalCap} booked</span>
+                  </div>
+                  {/* Fill bar */}
+                  <div className="mt-2 h-1.5 rounded-full bg-white border border-[#E0E0E0] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, background: accent }}
+                    />
+                  </div>
+                  <div className="mt-1.5 text-[10px] text-[#616161]">
+                    {fullSlots > 0 ? (
+                      <span className="text-[#D32F2F] font-semibold">{fullSlots} slot{fullSlots > 1 ? 's' : ''} full</span>
+                    ) : (
+                      <span>{pct}% capacity</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {[0, 1].map((dayOffset) => {
@@ -1051,12 +1111,21 @@ const Admin = () => {
                     );
                     const booked = slotBookings[`${dateIso}|${s.start}`] || 0;
                     const isFull = booked >= 10;
+                    const heat = booked === 0
+                      ? null
+                      : isFull
+                        ? 'bg-[#D32F2F] text-white'
+                        : booked >= 7
+                          ? 'bg-[#F57C00] text-white'
+                          : booked >= 4
+                            ? 'bg-[#FFEBEE] text-[#D32F2F]'
+                            : 'bg-emerald-50 text-emerald-700';
                     return (
                       <button
                         key={s.start}
                         onClick={() => toggleSlotDisabled(dateIso, s.start, isDisabled)}
                         data-testid={`admin-slot-${dateIso}-${s.start}`}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex flex-col items-center min-w-[88px] ${
+                        className={`relative px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex flex-col items-center min-w-[100px] ${
                           isDisabled
                             ? 'bg-[#FFEBEE] text-[#D32F2F] border-[#D32F2F] line-through'
                             : isFull
@@ -1064,6 +1133,12 @@ const Admin = () => {
                             : 'bg-white text-[#212121] border-[#E0E0E0] hover:border-[#D32F2F]/40'
                         }`}
                       >
+                        {/* Booking count chip — top-right */}
+                        {!isDisabled && booked > 0 && (
+                          <span className={`absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center shadow ${heat}`}>
+                            {booked}
+                          </span>
+                        )}
                         <span>{s.label}</span>
                         <span className={`text-[9px] mt-0.5 font-semibold ${
                           isDisabled ? 'text-[#D32F2F]' : isFull ? 'text-[#D32F2F]' : 'text-[#616161]'
@@ -1077,10 +1152,20 @@ const Admin = () => {
               </div>
             );
           })}
-          <p className="text-[11px] text-[#616161] mt-3">
-            <span className="inline-block px-2 py-0.5 bg-[#FFEBEE] text-[#D32F2F] rounded mr-1">Red</span> = blocked from customers ·
-            <span className="inline-block px-2 py-0.5 bg-white border border-[#E0E0E0] rounded ml-2">White</span> = open
-          </p>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#616161]">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-emerald-50 border border-emerald-200" /> Light load
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#FFEBEE] border border-[#FFCDD2]" /> Filling up
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#F57C00]" /> Almost full
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-[#D32F2F]" /> Full / blocked
+            </span>
+          </div>
         </div>
       </section>
 
