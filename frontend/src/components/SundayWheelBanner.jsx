@@ -27,7 +27,7 @@ const SundayWheelBanner = () => {
         type="button"
         onClick={() => setOpen(true)}
         data-testid="sunday-wheel-banner"
-        className="w-full py-2.5 px-4 bg-gradient-to-r from-[#D32F2F] via-[#E64A19] to-[#FF6B35] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all sticky top-16 z-30 shadow-md"
+        className="w-full py-2.5 px-4 bg-gradient-to-r from-[#D32F2F] via-[#E64A19] to-[#FF6B35] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md relative z-10"
       >
         <PartyPopper className="w-4 h-4 animate-bounce" />
         <span>Sunday Lucky Spin is LIVE — win up to 15% off!</span>

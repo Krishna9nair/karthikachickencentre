@@ -23,6 +23,7 @@ const Terms = lazy(() => import('./pages/Terms'));
 const Cancellation = lazy(() => import('./pages/Cancellation'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const BottomTabBar = lazy(() => import('./components/BottomTabBar'));
+const SplashVideo = lazy(() => import('./components/SplashVideo'));
 
 // Code-split non-critical UI (floating buttons, offline gate, install prompt)
 // so they don't delay the LCP / TTI on the home page.
@@ -169,6 +170,7 @@ function App() {
                   <OfflineGate />
                   <FloatingActions />
                   <BottomTabBar />
+                  <SplashVideo />
                 </Suspense>
                 <Toaster />
               </BrowserRouter>
