@@ -19,6 +19,9 @@ const Profile = lazy(() => import('./pages/Profile'));
 const Orders = lazy(() => import('./pages/Orders'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const AuthReset = lazy(() => import('./pages/AuthReset'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Cancellation = lazy(() => import('./pages/Cancellation'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 
 // Code-split non-critical UI (floating buttons, offline gate, install prompt)
 // so they don't delay the LCP / TTI on the home page.
@@ -109,6 +112,30 @@ function App() {
                     element={
                       <Suspense fallback={<RouteFallback />}>
                         <Orders />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/terms"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Terms />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/cancellation"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Cancellation />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/privacy"
+                    element={
+                      <Suspense fallback={<RouteFallback />}>
+                        <Privacy />
                       </Suspense>
                     }
                   />

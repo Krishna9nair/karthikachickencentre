@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MapPin, Phone } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -15,7 +16,7 @@ const Footer = () => {
 
   return (
     <footer className="bg-[#212121] text-white">
-      <div className="max-w-7xl mx-auto px-5 md:px-8 py-10 md:py-14 grid md:grid-cols-3 gap-10">
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-10 md:py-14 grid md:grid-cols-4 gap-10">
         <div>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-white border border-white/20 flex items-center justify-center overflow-hidden">
@@ -56,6 +57,27 @@ const Footer = () => {
             <div>Mon – Sat: 7:00 AM – 9:00 PM</div>
             <div>Sunday: 7:00 AM – 9:00 PM</div>
           </div>
+        </div>
+
+        <div>
+          <h4 className="font-bold text-base text-white">Legal</h4>
+          <ul className="mt-4 space-y-2 text-sm text-white/80">
+            <li>
+              <Link to="/terms" data-testid="footer-terms-link" className="hover:text-white">
+                Terms &amp; Conditions
+              </Link>
+            </li>
+            <li>
+              <Link to="/cancellation" data-testid="footer-cancellation-link" className="hover:text-white">
+                Cancellation &amp; Refunds
+              </Link>
+            </li>
+            <li>
+              <Link to="/privacy" data-testid="footer-privacy-link" className="hover:text-white">
+                Privacy Policy
+              </Link>
+            </li>
+          </ul>
         </div>
       </div>
 
