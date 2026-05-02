@@ -3,17 +3,26 @@
   min-height: 100vh;
 }
 
-/* Font setup via Google Fonts in index.html head (fallback safe) */
+/* Font system: Poppins (headings/buttons) + Open Sans (body).
+   Loaded via Google Fonts in index.html head. */
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: #FFFFFF;
   color: #212121;
+  font-size: 15px;
+  line-height: 1.55;
 }
 
+h1, h2, h3, h4, h5, h6,
+.font-heading,
 .font-serif {
-  font-family: 'Fraunces', 'Playfair Display', Georgia, 'Times New Roman', serif;
-  font-optical-sizing: auto;
-  font-variation-settings: 'SOFT' 30, 'WONK' 0;
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+button, .btn {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 600;
 }
 
 /* Smooth scroll */

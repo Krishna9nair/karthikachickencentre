@@ -7,6 +7,11 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['"Open Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+  			heading: ['"Poppins"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+  			serif: ['"Poppins"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+  		},
   		screens: {
   			xs: '380px',
   		},
