@@ -50,6 +50,8 @@ RATE_LIMITS = {
     "coupon_validate": (30, 60),  # 30 coupon checks per minute per IP
     "rider_login": (10, 600),   # 10 rider login attempts per 10 min per IP
     "profile_lookup": (60, 60), # 60 profile lookups per minute per IP
+    "signup": (3, 3600),        # 3 signups per hour per IP+email
+    "login": (10, 600),         # 10 logins per 10 min per IP+email
 }
 
 
@@ -1146,9 +1148,55 @@ async def upload_product_image(
 
 
 # ----------------------- Customer Auth (Google via Emergent) -----------------------
+import bcrypt
+import secrets
 EMERGENT_AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 SESSION_COOKIE_NAME = "session_token"
 SESSION_TTL_DAYS = 7
+SESSION_TTL_REMEMBER_DAYS = 90
+LOCKOUT_THRESHOLD = 5
+LOCKOUT_MINUTES = 15
+
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _hash_password(plain: str) -> str:
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def _issue_customer_session(
+    email: str,
+    name: Optional[str],
+    picture: Optional[str],
+    phone: Optional[str],
+    *,
+    role: str = "customer",
+    remember_me: bool = False,
+) -> Dict[str, Any]:
+    """Create a user_sessions row and return (token, expires_at) — shared by
+    both the Google OAuth flow and the email/password flow."""
+    ttl_days = SESSION_TTL_REMEMBER_DAYS if remember_me else SESSION_TTL_DAYS
+    expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
+    token = secrets.token_urlsafe(48)
+    sb.table("user_sessions").insert({
+        "session_token": token,
+        "email": email.lower(),
+        "name": sanitize_text(name or "", 80),
+        "picture": picture[:500] if picture else None,
+        "phone": phone,
+        "role": role,
+        "remember_me": remember_me,
+        "expires_at": expires_at.isoformat(),
+        "last_seen_at": datetime.now(timezone.utc).isoformat(),
+    }).execute()
+    return {"token": token, "expires_at": expires_at, "ttl_days": ttl_days}
 
 
 def _bearer_or_cookie(request: Request, authorization: Optional[str]) -> Optional[str]:
@@ -1169,7 +1217,7 @@ def require_customer(request: Request, authorization: Optional[str] = Header(Non
         raise HTTPException(401, "Not signed in")
     try:
         res = sb.table("user_sessions").select(
-            "id, session_token, email, name, picture, phone, expires_at"
+            "id, session_token, email, name, picture, phone, role, expires_at"
         ).eq("session_token", token).limit(1).execute()
         row = res.data[0] if res.data else None
     except Exception as e:
@@ -1282,6 +1330,7 @@ async def auth_me(user=Depends(require_customer)):
         "name": user.get("name"),
         "picture": user.get("picture"),
         "phone": user.get("phone"),
+        "role": user.get("role") or "customer",
     }
 
 
@@ -1295,6 +1344,172 @@ async def auth_logout(request: Request, authorization: Optional[str] = Header(No
             logging.warning("session delete failed: %s", e)
     response = JSONResponse({"ok": True})
     response.delete_cookie(SESSION_COOKIE_NAME, path="/", samesite="none", secure=True)
+    return response
+
+
+# ----------------------- Email/Password Auth -----------------------
+class SignupIn(BaseModel):
+    email: str = Field(..., min_length=5, max_length=120)
+    password: str = Field(..., min_length=8, max_length=128)
+    name: str = Field(..., min_length=1, max_length=80)
+    phone: Optional[str] = Field(None, min_length=10, max_length=15)
+    remember_me: bool = False
+
+
+class LoginIn(BaseModel):
+    email: str = Field(..., min_length=5, max_length=120)
+    password: str = Field(..., min_length=1, max_length=128)
+    remember_me: bool = False
+
+
+def _set_session_cookie(response: JSONResponse, token: str, ttl_days: int) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=ttl_days * 24 * 3600,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
+
+
+@api_router.post("/auth/signup")
+async def auth_signup(payload: SignupIn, request: Request):
+    email = payload.email.strip().lower()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "Invalid email")
+    if len(payload.password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+    rate_limit(request, "signup", extra_key=email)
+    name = sanitize_text(payload.name, 80)
+    # Refuse if already registered
+    try:
+        existing = sb.table("customer_credentials").select("email").eq(
+            "email", email
+        ).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    if existing.data:
+        raise HTTPException(409, "An account with this email already exists. Try signing in.")
+    # Optional phone link at signup — fail fast if it's already taken by another email
+    phone = None
+    if payload.phone:
+        phone = validate_indian_phone(payload.phone)
+        try:
+            taken = sb.table("customer_profiles").select("email").eq(
+                "phone", phone
+            ).limit(1).execute()
+            if taken.data and taken.data[0].get("email") and taken.data[0]["email"].lower() != email:
+                raise HTTPException(409, "This phone is already linked to another account.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, f"Phone lookup failed: {e}")
+    # Persist credential + profile
+    try:
+        sb.table("customer_credentials").insert({
+            "email": email,
+            "password_hash": _hash_password(payload.password),
+        }).execute()
+        if phone:
+            # Upsert minimal profile
+            sb.table("customer_profiles").upsert({
+                "phone": phone,
+                "name": name,
+                "email": email,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }, on_conflict="phone").execute()
+    except Exception as e:
+        logging.exception("signup persist failed")
+        raise HTTPException(500, f"Could not create account: {e}")
+    # Issue session
+    sess = _issue_customer_session(
+        email=email, name=name, picture=None, phone=phone,
+        role="customer", remember_me=payload.remember_me,
+    )
+    response = JSONResponse({
+        "ok": True,
+        "user": {"email": email, "name": name, "picture": None, "phone": phone, "role": "customer"},
+        "session_token": sess["token"],
+    })
+    _set_session_cookie(response, sess["token"], sess["ttl_days"])
+    return response
+
+
+@api_router.post("/auth/login")
+async def auth_login(payload: LoginIn, request: Request):
+    email = payload.email.strip().lower()
+    rate_limit(request, "login", extra_key=email)
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "Invalid email")
+    try:
+        cred_res = sb.table("customer_credentials").select(
+            "email, password_hash, failed_attempts, locked_until"
+        ).eq("email", email).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Login lookup failed: {e}")
+    cred = cred_res.data[0] if cred_res.data else None
+    if not cred:
+        # Constant-time-ish: still spend time hashing to avoid leaking existence
+        _verify_password(payload.password, "$2b$12$abcdefghijklmnopqrstuv0123456789abcdefghijklmnopqrst")
+        raise HTTPException(401, "Invalid email or password")
+    # Lockout check
+    locked = cred.get("locked_until")
+    if locked:
+        try:
+            lock_dt = datetime.fromisoformat(locked.replace("Z", "+00:00")) if isinstance(locked, str) else locked
+            if lock_dt.tzinfo is None:
+                lock_dt = lock_dt.replace(tzinfo=timezone.utc)
+            if lock_dt > datetime.now(timezone.utc):
+                raise HTTPException(429, "Too many failed attempts. Try again in 15 minutes.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+    # Verify password
+    if not _verify_password(payload.password, cred["password_hash"]):
+        attempts = (cred.get("failed_attempts") or 0) + 1
+        update = {"failed_attempts": attempts, "updated_at": datetime.now(timezone.utc).isoformat()}
+        if attempts >= LOCKOUT_THRESHOLD:
+            update["locked_until"] = (
+                datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)
+            ).isoformat()
+            update["failed_attempts"] = 0
+        try:
+            sb.table("customer_credentials").update(update).eq("email", email).execute()
+        except Exception:
+            pass
+        raise HTTPException(401, "Invalid email or password")
+    # Reset failed attempts
+    try:
+        sb.table("customer_credentials").update({
+            "failed_attempts": 0, "locked_until": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("email", email).execute()
+    except Exception:
+        pass
+    # Pull associated profile (if any) for name / linked phone
+    name, phone = "", None
+    try:
+        prof = sb.table("customer_profiles").select(
+            "name, phone"
+        ).eq("email", email).limit(1).execute()
+        if prof.data:
+            name = prof.data[0].get("name") or ""
+            phone = prof.data[0].get("phone")
+    except Exception:
+        pass
+    sess = _issue_customer_session(
+        email=email, name=name, picture=None, phone=phone,
+        role="customer", remember_me=payload.remember_me,
+    )
+    response = JSONResponse({
+        "ok": True,
+        "user": {"email": email, "name": name, "picture": None, "phone": phone, "role": "customer"},
+        "session_token": sess["token"],
+    })
+    _set_session_cookie(response, sess["token"], sess["ttl_days"])
     return response
 
 

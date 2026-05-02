@@ -41,6 +41,36 @@ export const CustomerAuthProvider = ({ children }) => {
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
+  // Email/password sign-in. Returns the resolved user object (also updates context).
+  const signInWithPassword = async ({ email, password, rememberMe = false }) => {
+    const { data } = await api.post('/auth/login', {
+      email: email.trim().toLowerCase(),
+      password,
+      remember_me: !!rememberMe,
+    });
+    if (data?.session_token) {
+      try { localStorage.setItem('cc_session_token', data.session_token); } catch (_) {}
+    }
+    setUser(data.user);
+    return data.user;
+  };
+
+  // Email/password sign-up. Same response shape as login; auto-signs the user in.
+  const signUp = async ({ email, password, name, phone = null, rememberMe = false }) => {
+    const { data } = await api.post('/auth/signup', {
+      email: email.trim().toLowerCase(),
+      password,
+      name: name.trim(),
+      phone: phone ? phone.replace(/\D/g, '').slice(0, 10) : null,
+      remember_me: !!rememberMe,
+    });
+    if (data?.session_token) {
+      try { localStorage.setItem('cc_session_token', data.session_token); } catch (_) {}
+    }
+    setUser(data.user);
+    return data.user;
+  };
+
   const signOut = async () => {
     try {
       await api.post('/auth/logout');
@@ -50,7 +80,7 @@ export const CustomerAuthProvider = ({ children }) => {
   };
 
   return (
-    <CustomerAuthContext.Provider value={{ user, loading, refresh, signIn, signOut, setUser }}>
+    <CustomerAuthContext.Provider value={{ user, loading, refresh, signIn, signInWithPassword, signUp, signOut, setUser }}>
       {children}
     </CustomerAuthContext.Provider>
   );

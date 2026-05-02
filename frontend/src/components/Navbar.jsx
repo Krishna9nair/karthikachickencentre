@@ -152,14 +152,14 @@ const Navbar = () => {
               )}
             </div>
           ) : (
-            <button
-              onClick={() => signIn('/profile')}
+            <Link
+              to="/auth"
               data-testid="navbar-signin-btn"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white text-[#212121] text-sm hover:border-[#D32F2F] hover:text-[#D32F2F] transition-colors"
             >
               <User className="w-4 h-4 text-[#D32F2F]" />
               <span className="font-medium">Sign in</span>
-            </button>
+            </Link>
           )}
 
           {/* Cart */}
@@ -215,13 +215,13 @@ const Navbar = () => {
               <User className="w-3.5 h-3.5 text-[#D32F2F]" /> {customer.name?.split(' ')[0] || 'Account'}
             </Link>
           ) : (
-            <button
-              onClick={() => signIn('/profile')}
+            <Link
+              to="/auth"
               data-testid="navbar-mobile-signin-btn"
               className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-white text-[#212121] border border-[#E0E0E0] hover:border-[#D32F2F]"
             >
               <User className="w-3.5 h-3.5 text-[#D32F2F]" /> Sign in
-            </button>
+            </Link>
           )}
         </div>
       </nav>

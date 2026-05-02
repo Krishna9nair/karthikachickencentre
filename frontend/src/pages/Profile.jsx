@@ -145,13 +145,13 @@ const Profile = () => {
           <p className="mt-2 text-sm text-[#616161]">
             Sign in with Google to manage saved addresses and view your order history.
           </p>
-          <button
-            onClick={() => signIn('/profile')}
+          <Link
+            to="/auth?next=/profile"
             data-testid="profile-google-signin-btn"
             className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#E0E0E0] bg-white hover:bg-[#F5F5F5] text-[#212121] font-semibold shadow-sm"
           >
-            <GoogleIcon /> Sign in with Google
-          </button>
+            Sign in to continue
+          </Link>
           <Link to="/" className="block mt-4 text-sm text-[#616161] hover:text-[#D32F2F]">← Back to home</Link>
         </div>
       </div>

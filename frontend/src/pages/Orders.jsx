@@ -105,13 +105,13 @@ const Orders = () => {
           </div>
           <h1 className="text-2xl font-bold text-[#212121]">Sign in to see your orders</h1>
           <p className="mt-2 text-sm text-[#616161]">Track ongoing deliveries, browse past orders, and reorder in one tap.</p>
-          <button
-            onClick={() => signIn('/orders')}
+          <Link
+            to="/auth?next=/orders"
             data-testid="orders-signin-btn"
             className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#E0E0E0] hover:bg-[#F5F5F5] text-[#212121] font-semibold shadow-sm"
           >
-            Sign in with Google
-          </button>
+            Sign in to continue
+          </Link>
           <Link to="/" className="block mt-4 text-sm text-[#616161] hover:text-[#D32F2F]">← Back to home</Link>
         </div>
       </div>
