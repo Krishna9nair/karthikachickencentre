@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { MessageCircle, Phone, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { MessageCircle, Phone } from 'lucide-react';
 import { api } from '../lib/api';
 import { useCart } from '../context/CartContext';
 
 // Hardcoded fallback so the buttons still appear even if the shop endpoint is unreachable.
 const FALLBACK_PHONE = '9619417452';
 
+// Routes where the floating Call/WhatsApp stack should NOT render — e.g.
+// auth flows where it would overlap form fields.
+const HIDDEN_ROUTES = ['/auth', '/admin', '/rider'];
+
 // Floating contact stack: WhatsApp + Call. Auto-hides when the cart drawer
-// or checkout dialog is open so it doesn't overlap critical CTAs.
+// or checkout dialog is open, and on auth/admin/rider routes.
 const FloatingActions = () => {
   const { isOpen: cartOpen } = useCart();
+  const { pathname } = useLocation();
   const [phone, setPhone] = useState(null);
-  const [tipDismissed, setTipDismissed] = useState(false);
-  const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,55 +34,31 @@ const FloatingActions = () => {
         if (e164) setPhone(e164);
       } catch (_) {}
     })();
-    const dismissed = localStorage.getItem('cc_wa_tip_dismissed');
-    if (!dismissed) setTimeout(() => setShowTip(true), 4000);
-    setTipDismissed(!!dismissed);
     return () => { cancelled = true; };
   }, []);
 
   if (!phone || cartOpen) return null;
+  if (HIDDEN_ROUTES.some((r) => pathname.startsWith(r))) return null;
 
   const waMsg = 'Hi! I want to place an order from ChickenCrew.';
   const waHref = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
   const telHref = `tel:+${phone}`;
 
-  const dismissTip = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    localStorage.setItem('cc_wa_tip_dismissed', '1');
-    setShowTip(false);
-    setTipDismissed(true);
-  };
-
   return (
     <div
-      className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3"
+      // Sit above the BottomTabBar (~56px) so it doesn't overlap mobile nav.
+      className="fixed bottom-20 md:bottom-5 right-4 md:right-5 z-[55] flex flex-col items-end gap-3"
       data-testid="floating-actions"
     >
-      {showTip && !tipDismissed && (
-        <div className="bg-white border border-[#E0E0E0] rounded-2xl shadow-lg px-4 py-3 max-w-[240px] text-sm text-[#212121] relative">
-          <button
-            onClick={dismissTip}
-            aria-label="Dismiss"
-            className="absolute top-1.5 right-1.5 p-1 rounded-full text-[#616161] hover:bg-[#F5F5F5]"
-          >
-            <X className="w-3 h-3" />
-          </button>
-          <div className="font-medium pr-3">Need help? Tap to chat or call.</div>
-          <div className="text-xs text-[#616161] mt-0.5">Reply usually within 5 min</div>
-          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-[#E0E0E0] rotate-45" />
-        </div>
-      )}
-
       {/* Call */}
       <a
         href={telHref}
         aria-label="Call shop"
         title="Call shop"
         data-testid="floating-call-btn"
-        className="w-12 h-12 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-95 shadow-lg flex items-center justify-center transition-all"
+        className="w-11 h-11 md:w-12 md:h-12 rounded-full bg-[#D32F2F] hover:bg-[#B71C1C] active:scale-95 shadow-lg flex items-center justify-center transition-all"
       >
-        <Phone className="w-5 h-5 text-white" strokeWidth={2.2} />
+        <Phone className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={2.2} />
       </a>
 
       {/* WhatsApp */}
@@ -89,14 +69,9 @@ const FloatingActions = () => {
         aria-label="Chat on WhatsApp"
         title="Chat on WhatsApp"
         data-testid="whatsapp-fab-btn"
-        className="group w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 shadow-lg flex items-center justify-center transition-all relative"
-        onClick={() => {
-          localStorage.setItem('cc_wa_tip_dismissed', '1');
-          setShowTip(false);
-        }}
+        className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#25D366] hover:bg-[#1FBD5A] active:scale-95 shadow-lg flex items-center justify-center transition-all"
       >
-        <span className="absolute inset-0 rounded-full bg-[#25D366] opacity-60 animate-ping pointer-events-none" />
-        <MessageCircle className="w-7 h-7 text-white fill-white relative" strokeWidth={1.5} />
+        <MessageCircle className="w-6 h-6 md:w-7 md:h-7 text-white fill-white" strokeWidth={1.5} />
       </a>
     </div>
   );
