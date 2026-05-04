@@ -1,0 +1,24 @@
+# Generated and tooling
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Local env
+android/local.properties
+ios/
+
+# Signing
+android/key.properties
+*.jks
+*.keystore
+
+# Coverage / outputs
+coverage/

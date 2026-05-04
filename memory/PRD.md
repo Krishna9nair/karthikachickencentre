@@ -99,3 +99,18 @@ Clone `karthikachickencentre.shop` into an exact-UI replica branded as **Chicken
 - Multiple saved addresses per phone (Home / Office labels) — currently just last-used
 - Saturday "spin live" countdown timer for Sunday wheel
 - Share-on-WhatsApp button for Sunday wheel winners
+
+## Mobile (Flutter Native Android App) — Added 2026-02-13
+- New `/app/mobile/` Flutter project (Flutter 3.27+, Dart 3.6+) — production-ready, NOT a WebView wrapper.
+- Architecture: `app/` (theme, router, env), `core/` (Dio API client, SharedPreferences auth + cart), `data/` (models + repositories), `features/` (auth, home, product, cart, checkout, orders, profile, addresses, legal, shell, splash), `widgets/`.
+- Connects to existing FastAPI backend at `https://karthikachickencentre.shop` — uses `Authorization: Bearer <session_token>` issued by `/api/auth/login`, `/api/auth/signup`, `/api/auth/google/session` so it works inside native WebViews where third-party cookies are blocked.
+- **Auth**: Email + password sign-in / sign-up with Remember Me (90 vs 7-day session), Forgot Password (Resend), `https://karthikachickencentre.shop/auth/reset` deep-link handled in `AndroidManifest.xml`. "Continue with Google" button stub — actual native Google sign-in requires Firebase OAuth client + SHA-1 (documented in mobile README).
+- **Home**: Live products via `/api/public/products`, auto-refresh every 60s, pull-to-refresh, BEST/FRESH tags, IN-CART pill, hero panel + trust badges, shop-notice banner, skeleton loaders.
+- **Cart**: Local-first (SharedPreferences-persisted), per-line stepper, sticky cart bar (Swiggy-style red pill), empty state.
+- **Checkout**: Native form (auto-pulled saved addresses), 6 delivery slots × today/tomorrow with 30-min cutoff, coupon validation, first-order eligibility, server-mirrored discount math, **Cash on Delivery** + **Razorpay (UPI/Card/Net banking)** via `razorpay_flutter`.
+- **Orders**: Tabs (Ongoing / Delivered / Cancelled), per-card Reorder + Cancel, order detail with 4-stage timeline (Placed → Preparing → Out for delivery → Delivered).
+- **Profile**: Avatar with initial, link-phone gate, edit name, multi-address CRUD, WhatsApp shortcut, legal links (Terms / Privacy / Cancellation via WebView for content sync), sign out.
+- **Splash**: Animated red logo screen on `#E50A12` (matches web splash).
+- **Bottom nav**: Home / Cart / Orders / Profile with cart count badge.
+- Android config: `applicationId = com.karthika.chicken`, min SDK 21, ProGuard rules for Razorpay + Firebase, signing config via `key.properties`, deep-link intent for password reset URL.
+- Output: `flutter build appbundle --release` → `app-release.aab` ready for Play Console upload.
