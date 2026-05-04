@@ -32,8 +32,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _error = null;
     });
     try {
-      final List<Product> all = await ProductsRepository.instance.list();
-      final Product match = all.firstWhere(
+      // Prefer the dedicated single-product endpoint; fall back to the
+      // full list if the dedicated route isn't deployed yet.
+      Product? match = await ProductsRepository.instance.get(widget.productId);
+      match ??= (await ProductsRepository.instance.list()).firstWhere(
         (Product p) => p.id == widget.productId,
         orElse: () => throw StateError('Product not found'),
       );

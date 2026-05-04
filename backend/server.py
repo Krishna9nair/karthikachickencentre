@@ -539,51 +539,109 @@ async def get_shop():
 
 
 @api_router.get("/public/products")
-async def get_products():
-    """Returns active products joined with today's daily price (if any)."""
+@api_router.get("/products")  # Mobile-friendly alias (same response shape)
+async def get_products(include_unpriced: bool = False):
+    """Returns active products joined with today's price.
+
+    Price resolution order (per product):
+      1. `daily_prices` row for today
+      2. Most recent `daily_prices` row before today (last known price)
+      3. Excluded from response (unless `include_unpriced=true` is passed,
+         in which case we return `price: 0` so the client never sees null).
+
+    Query params:
+      - `include_unpriced=true` — keep unpriced products in the list with
+        `price: 0` instead of dropping them.
+    """
+    from datetime import date
+    today = date.today().isoformat()
+
     try:
-        products = sb.table("products").select(
+        products_res = sb.table("products").select(
             "id, name, description, image_url, unit, sort_order, is_active"
         ).eq("is_active", True).order("sort_order").execute()
+        products = products_res.data or []
 
-        prices = sb.table("daily_prices").select(
-            "product_id, price_per_unit, price_date"
-        ).eq("price_date", "today").execute()
-        # Supabase doesn't support 'today' literal; use current date instead
-    except Exception:
-        pass
-
-    # Re-query prices correctly
-    try:
-        from datetime import date
-        today = date.today().isoformat()
-        prices = sb.table("daily_prices").select(
+        # 1. Today's prices.
+        today_res = sb.table("daily_prices").select(
             "product_id, price_per_unit, price_date"
         ).eq("price_date", today).execute()
-        price_map = {p["product_id"]: float(p["price_per_unit"]) for p in (prices.data or [])}
+        price_map: Dict[str, float] = {
+            p["product_id"]: float(p["price_per_unit"])
+            for p in (today_res.data or [])
+        }
 
-        # Also fetch latest price if no row for today (fallback)
-        if not price_map:
-            all_prices = sb.table("daily_prices").select(
+        # 2. Per-product fallback: pull the latest historical price for
+        #    every product that doesn't already have a price for today.
+        missing_ids = [p["id"] for p in products if p["id"] not in price_map]
+        if missing_ids:
+            history_res = sb.table("daily_prices").select(
                 "product_id, price_per_unit, price_date"
-            ).order("price_date", desc=True).limit(200).execute()
-            seen = set()
-            for p in (all_prices.data or []):
-                if p["product_id"] in seen:
-                    continue
-                seen.add(p["product_id"])
-                price_map[p["product_id"]] = float(p["price_per_unit"])
+            ).in_("product_id", missing_ids).order(
+                "price_date", desc=True
+            ).limit(500).execute()
+            for row in (history_res.data or []):
+                pid = row["product_id"]
+                # Order is desc, so the first row we see per product is the latest.
+                if pid not in price_map:
+                    price_map[pid] = float(row["price_per_unit"])
 
+        # 3. Build the response. Drop unpriced products by default (so the
+        #    Flutter app never has to special-case `null`); set to 0 if the
+        #    caller explicitly opted in.
         out = []
-        for p in (products.data or []):
-            out.append({
-                **p,
-                "price": price_map.get(p["id"]),
-            })
+        for p in products:
+            price = price_map.get(p["id"])
+            if price is None:
+                if include_unpriced:
+                    out.append({**p, "price": 0.0})
+                # else: excluded from response
+                continue
+            out.append({**p, "price": price})
+
         return {"products": out, "date": today}
     except Exception as e:
         logging.exception("products fetch failed")
         raise HTTPException(500, f"Failed to fetch products: {e}")
+
+
+@api_router.get("/public/products/{product_id}")
+@api_router.get("/products/{product_id}")
+async def get_product_by_id(product_id: str):
+    """Single product lookup. Same price-resolution rules as the list
+    endpoint (today → latest historical → 0)."""
+    from datetime import date
+    import re as _re
+    if not _re.match(r"^[0-9a-fA-F-]{8,40}$", product_id):
+        raise HTTPException(404, "Product not found")
+    today = date.today().isoformat()
+    try:
+        prod_res = sb.table("products").select(
+            "id, name, description, image_url, unit, sort_order, is_active"
+        ).eq("id", product_id).limit(1).execute()
+        if not prod_res.data:
+            raise HTTPException(404, "Product not found")
+        product = prod_res.data[0]
+        # Today first.
+        today_res = sb.table("daily_prices").select(
+            "price_per_unit"
+        ).eq("product_id", product_id).eq("price_date", today).limit(1).execute()
+        price = float(today_res.data[0]["price_per_unit"]) if today_res.data else None
+        # Latest historical fallback.
+        if price is None:
+            hist_res = sb.table("daily_prices").select(
+                "price_per_unit"
+            ).eq("product_id", product_id).order(
+                "price_date", desc=True
+            ).limit(1).execute()
+            if hist_res.data:
+                price = float(hist_res.data[0]["price_per_unit"])
+        return {**product, "price": price if price is not None else 0.0}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("single product fetch failed")
+        raise HTTPException(500, f"Failed to fetch product: {e}")
 
 
 # ----------------------- Customer profile (saved address) -----------------------
