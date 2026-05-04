@@ -1,0 +1,70 @@
+name: chickencrew
+description: ChickenCrew — Karthika Chicken Centre native Android app.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Networking & data
+  dio: ^5.5.0
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.1.1
+  shared_preferences: ^2.2.3
+  cached_network_image: ^3.3.1
+  flutter_dotenv: ^5.1.0
+
+  # UI
+  google_fonts: ^6.2.1
+  lucide_icons: ^0.257.0
+  flutter_svg: ^2.0.10+1
+  shimmer: ^3.0.0
+
+  # Routing
+  go_router: ^14.2.0
+
+  # Connectivity / runtime
+  connectivity_plus: ^6.0.3
+  url_launcher: ^6.3.0
+  package_info_plus: ^8.0.0
+
+  # FCM (configured but lazy-loaded; safe to keep without google-services for v1)
+  firebase_core: ^3.3.0
+  firebase_messaging: ^15.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#E50A12"
+  adaptive_icon_foreground: "assets/images/app_icon_fg.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#E50A12"
+  image: assets/images/splash_logo.png
+  android_12:
+    color: "#E50A12"
+    image: assets/images/splash_logo.png
