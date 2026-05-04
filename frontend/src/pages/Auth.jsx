@@ -251,6 +251,10 @@ const Auth = () => {
                 {rememberMe ? '· stay signed in for 90 days' : '· session ends in 7 days'}
               </span>
             </label>
+            <p className="text-[11px] text-[#616161] -mt-1.5">
+              Tip: admin sign-ins always stay signed in across browser restarts
+              (sessions auto-refresh securely until you sign out).
+            </p>
 
             {tab === 'signin' && (
               <div className="text-right">

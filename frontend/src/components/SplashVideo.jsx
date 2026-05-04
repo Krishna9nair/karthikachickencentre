@@ -52,7 +52,8 @@ const SplashVideo = () => {
       aria-label="ChickenCrew intro"
       data-testid="splash-video-overlay"
       onClick={finish}
-      className={`fixed inset-0 z-[200] bg-white flex items-center justify-center transition-opacity duration-300 ${fading ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed inset-0 z-[200] flex items-center justify-center transition-opacity duration-300 ${fading ? 'opacity-0' : 'opacity-100'}`}
+      style={{ background: '#E50A12' }}
     >
       <video
         ref={videoRef}
@@ -67,7 +68,8 @@ const SplashVideo = () => {
           // Once we know we can play, give it the full duration to finish.
           clearTimeout(timerRef.current);
         }}
-        className="w-full h-full object-contain bg-white"
+        className="w-full h-full object-contain"
+        style={{ background: '#E50A12' }}
       />
       <button
         type="button"
