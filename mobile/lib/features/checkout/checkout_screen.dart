@@ -10,10 +10,46 @@ import '../../core/api_client.dart';
 import '../../core/auth_storage.dart';
 import '../../core/cart_store.dart';
 import '../../data/models/address.dart';
+import '../../data/models/cart_item.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/orders_repository.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../data/repositories/profile_repository.dart';
+import 'save_address_prompt.dart';
+
+/// Args passed via go_router `extra` from CheckoutScreen → BillScreen.
+class BillNavArgs {
+  const BillNavArgs({
+    required this.orderId,
+    required this.customerName,
+    required this.customerPhone,
+    required this.customerAddress,
+    required this.items,
+    required this.totalAmount,
+    required this.paymentMethod,
+    this.grossSubtotal,
+    this.discount = 0,
+    this.firstOrderDiscountApplied = false,
+    this.couponCode,
+    this.deliverySlotDate,
+    this.deliverySlotLabel,
+    this.deliveryFee = 0,
+  });
+  final String orderId;
+  final String customerName;
+  final String customerPhone;
+  final String customerAddress;
+  final List<CartLine> items;
+  final double totalAmount;
+  final String paymentMethod;
+  final double? grossSubtotal;
+  final double discount;
+  final bool firstOrderDiscountApplied;
+  final String? couponCode;
+  final String? deliverySlotDate;
+  final String? deliverySlotLabel;
+  final double deliveryFee;
+}
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -223,6 +259,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeCod() async {
+    // Snapshot cart BEFORE clearing — we need them for the bill screen.
+    final List<CartLine> snapshotItems =
+        List<CartLine>.from(CartStore.instance.lines);
     final Map<String, dynamic> resp =
         await OrdersRepository.instance.placeCodOrder(
       name: _name.text.trim(),
@@ -242,7 +281,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final String? orderId = order is Map ? order['id']?.toString() : null;
     if (!mounted) return;
     CartStore.instance.clear();
-    _showSuccess(orderId, paid: false);
+    await _onOrderPlaced(
+      orderId: orderId,
+      items: snapshotItems,
+      paymentMethod: 'cod',
+    );
   }
 
   Future<void> _startRazorpay() async {
@@ -288,6 +331,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _pendingLocalOrderId;
 
   Future<void> _onRzpSuccess(PaymentSuccessResponse r) async {
+    // Snapshot cart BEFORE clearing — needed for bill screen.
+    final List<CartLine> snapshotItems =
+        List<CartLine>.from(CartStore.instance.lines);
     try {
       final Map<String, dynamic> resp =
           await OrdersRepository.instance.verifyPayment(
@@ -301,7 +347,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       CartStore.instance.clear();
       setState(() => _busy = false);
-      _showSuccess(orderId, paid: true);
+      await _onOrderPlaced(
+        orderId: orderId,
+        items: snapshotItems,
+        paymentMethod: 'razorpay',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -324,40 +374,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _busy = false);
   }
 
-  void _showSuccess(String? orderId, {required bool paid}) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext c) => AlertDialog(
-        title: Row(
-          children: const <Widget>[
-            Icon(LucideIcons.checkCircle, color: AppColors.success),
-            SizedBox(width: 8),
-            Text('Order placed!'),
-          ],
-        ),
-        content: Text(
-          paid
-              ? 'Payment confirmed. We’ll deliver to you in your selected slot.'
-              : 'You’ll pay cash on delivery. We’ll deliver in your selected slot.',
-        ),
-        actions: <Widget>[
-          if (orderId != null)
-            FilledButton(
-              onPressed: () {
-                Navigator.of(c).pop();
-                context.go('/orders/$orderId');
-              },
-              child: const Text('Track order'),
-            ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(c).pop();
-              context.go('/home');
-            },
-            child: const Text('Done'),
-          ),
-        ],
+  Future<void> _onOrderPlaced({
+    required String? orderId,
+    required List<CartLine> items,
+    required String paymentMethod,
+  }) async {
+    if (orderId == null) {
+      // No order ID returned — show a generic success and bail.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order placed!')),
+      );
+      context.go('/orders');
+      return;
+    }
+    // Offer to save the address for next time (only signed-in + linked-phone).
+    await SaveAddressPrompt.showIfRelevant(
+      context,
+      address: _address.text.trim(),
+    );
+    if (!mounted) return;
+    // Push the bill screen and clear the checkout from the back stack.
+    context.pushReplacement(
+      '/bill',
+      extra: BillNavArgs(
+        orderId: orderId,
+        customerName: _name.text.trim(),
+        customerPhone: _phone.text.replaceAll(RegExp(r'\D'), ''),
+        customerAddress: _address.text.trim(),
+        items: items,
+        totalAmount: _payable,
+        paymentMethod: paymentMethod,
+        grossSubtotal: _itemsTotal,
+        discount: _appliedDiscount,
+        firstOrderDiscountApplied: _firstOrderDiscount > 0 &&
+            _firstOrderDiscount >= _couponDiscount,
+        couponCode: _couponCode,
+        deliverySlotDate: _selectedSlot?.date,
+        deliverySlotLabel: _selectedSlot?.label,
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/auth/signup_screen.dart';
+import '../features/bill/bill_screen.dart';
 import '../features/cart/cart_screen.dart';
 import '../features/checkout/checkout_screen.dart';
 import '../features/home/home_screen.dart';
@@ -110,6 +111,34 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,
+        path: '/bill',
+        name: 'bill',
+        builder: (BuildContext c, GoRouterState s) {
+          final BillNavArgs? args = s.extra as BillNavArgs?;
+          if (args == null) {
+            // Direct navigation to /bill without args — bounce back home.
+            return const _MissingBillArgs();
+          }
+          return BillScreen(
+            orderId: args.orderId,
+            customerName: args.customerName,
+            customerPhone: args.customerPhone,
+            customerAddress: args.customerAddress,
+            items: args.items,
+            totalAmount: args.totalAmount,
+            paymentMethod: args.paymentMethod,
+            grossSubtotal: args.grossSubtotal,
+            discount: args.discount,
+            firstOrderDiscountApplied: args.firstOrderDiscountApplied,
+            couponCode: args.couponCode,
+            deliverySlotDate: args.deliverySlotDate,
+            deliverySlotLabel: args.deliverySlotLabel,
+            deliveryFee: args.deliveryFee,
+          );
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
         path: '/orders/:id',
         name: 'order-detail',
         builder: (BuildContext c, GoRouterState s) =>
@@ -132,3 +161,17 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
     ],
   );
 });
+
+
+/// Placeholder shown when /bill is opened without `extra` args (e.g. via
+/// deep-link). Bounces back to /home.
+class _MissingBillArgs extends StatelessWidget {
+  const _MissingBillArgs();
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) context.go('/home');
+    });
+    return const Scaffold(body: SizedBox.shrink());
+  }
+}

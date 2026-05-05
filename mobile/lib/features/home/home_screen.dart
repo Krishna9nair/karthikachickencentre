@@ -12,6 +12,7 @@ import '../../core/auth_storage.dart';
 import '../../core/cart_store.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/products_repository.dart';
+import '../../widgets/floating_whatsapp_fab.dart';
 import '../../widgets/sticky_cart_bar.dart';
 import '../reviews/reviews_section.dart';
 import '../wheel/sunday_wheel_banner.dart';
@@ -161,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
               bottom: 0,
               child: StickyCartBar(),
             ),
+            const FloatingWhatsAppFab(),
           ],
         );
       },
