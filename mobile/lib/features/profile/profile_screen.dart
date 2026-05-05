@@ -226,10 +226,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext c) => AlertDialog(
         title: const Text('Edit name'),
-        content: TextField(
-          controller: ctl,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: ctl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
         ),
         actions: <Widget>[
           TextButton(
@@ -271,12 +274,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext c) => AlertDialog(
         title: const Text('Link phone'),
-        content: TextField(
-          controller: ctl,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: '10-digit phone',
-            prefixText: '+91 ',
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: ctl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: '10-digit phone',
+              prefixText: '+91 ',
+            ),
           ),
         ),
         actions: <Widget>[

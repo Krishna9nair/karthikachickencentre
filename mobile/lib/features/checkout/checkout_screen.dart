@@ -366,48 +366,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
-      body: AnimatedBuilder(
-        animation: CartStore.instance,
-        builder: (BuildContext context, _) => SafeArea(
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: <Widget>[
-                _section('Delivery details'),
-                TextFormField(
-                  controller: _name,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    prefixIcon: Icon(LucideIcons.user),
-                  ),
-                  validator: (String? v) => (v == null || v.trim().length < 2)
-                      ? 'Enter your name'
-                      : null,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: <Widget>[
+              _section('Delivery details'),
+              TextFormField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Full name',
+                  prefixIcon: Icon(LucideIcons.user),
                 ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  onChanged: (_) => _checkFirstOrder(),
-                  decoration: const InputDecoration(
-                    labelText: '10-digit phone',
-                    prefixIcon: Icon(LucideIcons.phone),
-                  ),
-                  validator: (String? v) {
-                    final String d = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                    return d.length < 10 ? 'Enter a valid phone' : null;
-                  },
+                validator: (String? v) => (v == null || v.trim().length < 2)
+                    ? 'Enter your name'
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                onChanged: (_) => _checkFirstOrder(),
+                decoration: const InputDecoration(
+                  labelText: '10-digit phone',
+                  prefixIcon: Icon(LucideIcons.phone),
                 ),
-                const SizedBox(height: 10),
-                if (_savedAddresses.isNotEmpty) _buildAddressPicker(),
-                TextFormField(
-                  controller: _address,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Delivery address',
-                    prefixIcon: Icon(LucideIcons.mapPin),
+                validator: (String? v) {
+                  final String d = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                  return d.length < 10 ? 'Enter a valid phone' : null;
+                },
+              ),
+              const SizedBox(height: 10),
+              if (_savedAddresses.isNotEmpty) _buildAddressPicker(),
+              TextFormField(
+                controller: _address,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Delivery address',
+                  prefixIcon: Icon(LucideIcons.mapPin),
                   ),
                   validator: (String? v) => (v == null || v.trim().length < 5)
                       ? 'Enter a valid address'
@@ -491,7 +489,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
         ),
-      ),
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
