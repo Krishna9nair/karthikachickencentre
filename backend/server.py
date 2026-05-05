@@ -1515,6 +1515,59 @@ def _set_session_cookie(response: JSONResponse, token: str, ttl_days: int) -> No
     )
 
 
+def _try_admin_login_via_supabase(
+    *, email: str, password: str, remember_me: bool
+) -> Optional[Dict[str, Any]]:
+    """If `email` is a Supabase Auth admin, verify the password against
+    Supabase Auth and issue a server-side session_token with role='admin'.
+
+    Returns:
+        Dict with keys {token, ttl_days, name} on success, None when this
+        email isn't a Supabase admin (so the caller falls through to the
+        customer credentials path).
+
+    Never raises 401 — only returns None — so the customer path can still
+    take over if the email exists in `customer_credentials`.
+    """
+    try:
+        # Use the anon key client + signInWithPassword (same as the website).
+        # If the password is wrong this raises; we catch & return None.
+        user_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        auth_res = user_client.auth.sign_in_with_password({
+            "email": email,
+            "password": password,
+        })
+    except Exception as e:
+        logging.info("supabase admin sign-in failed for %s: %s", email, e)
+        return None
+    user = getattr(auth_res, "user", None)
+    if not user:
+        return None
+    user_id = user.id
+    user_meta = getattr(user, "user_metadata", None) or {}
+    full_name = user_meta.get("full_name") or user_meta.get("name") or ""
+
+    # Confirm this user actually has the admin role (defense-in-depth).
+    try:
+        roles = sb.table("user_roles").select("role").eq(
+            "user_id", user_id
+        ).eq("role", "admin").limit(1).execute()
+        if not roles.data:
+            return None  # Valid Supabase user but not an admin → fall through
+    except Exception as e:
+        logging.warning("admin role check failed: %s", e)
+        return None
+
+    # Mint a server-side session_token (same shape used for customers) so
+    # the mobile app can hit /api/customer/* + admin endpoints with one
+    # Bearer header.
+    sess = _issue_customer_session(
+        email=email, name=full_name, picture=None, phone=None,
+        role="admin", remember_me=remember_me,
+    )
+    return {**sess, "name": full_name}
+
+
 @api_router.post("/auth/signup")
 async def auth_signup(payload: SignupIn, request: Request):
     email = payload.email.strip().lower()
@@ -1584,6 +1637,36 @@ async def auth_login(payload: LoginIn, request: Request):
     rate_limit(request, "login", extra_key=email)
     if not EMAIL_RE.match(email):
         raise HTTPException(400, "Invalid email")
+
+    # ---- Path 1: Admin login via Supabase Auth -----------------------
+    # Admin users live in Supabase's `auth.users` table (managed by the
+    # Supabase Auth service), not in `customer_credentials`. Mobile apps
+    # can't run the Supabase JS client, so we proxy the password check
+    # through Supabase's REST endpoint and, on success, mint our own
+    # session_token with role='admin'. This keeps a single login API for
+    # both customers and admins.
+    admin_session = _try_admin_login_via_supabase(
+        email=email,
+        password=payload.password,
+        remember_me=payload.remember_me,
+    )
+    if admin_session is not None:
+        response = JSONResponse({
+            "ok": True,
+            "user": {
+                "email": email,
+                "name": admin_session.get("name") or "",
+                "picture": None,
+                "phone": None,
+                "role": "admin",
+            },
+            "session_token": admin_session["token"],
+        })
+        _set_session_cookie(response, admin_session["token"],
+                            admin_session["ttl_days"])
+        return response
+
+    # ---- Path 2: Customer login via customer_credentials -------------
     try:
         cred_res = sb.table("customer_credentials").select(
             "email, password_hash, failed_attempts, locked_until"
