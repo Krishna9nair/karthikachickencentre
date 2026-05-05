@@ -13,7 +13,12 @@ import '../../core/cart_store.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/products_repository.dart';
 import '../../widgets/sticky_cart_bar.dart';
+import '../reviews/reviews_section.dart';
+import '../wheel/sunday_wheel_banner.dart';
 import 'product_card.dart';
+import 'sections/final_cta_section.dart';
+import 'sections/visit_shop_section.dart';
+import 'sections/why_choose_us_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -102,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     ],
                   ),
+                  const SliverToBoxAdapter(child: SundayWheelBanner()),
                   SliverToBoxAdapter(child: _buildHero()),
                   if (_shopNotice.isNotEmpty)
                     SliverToBoxAdapter(child: _buildNotice()),
@@ -125,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   else
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       sliver: SliverGrid(
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
@@ -141,6 +147,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                  const SliverToBoxAdapter(child: WhyChooseUsSection()),
+                  const SliverToBoxAdapter(child: FinalCtaSection()),
+                  const SliverToBoxAdapter(child: ReviewsSection()),
+                  const SliverToBoxAdapter(child: VisitShopSection()),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
             ),
