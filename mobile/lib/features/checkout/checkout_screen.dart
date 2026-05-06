@@ -520,12 +520,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 const SizedBox(height: 24),
-                _section('Payment'),
-                _buildPaymentOption('cod', 'Cash on Delivery', LucideIcons.banknote),
-                const SizedBox(height: 8),
-                _buildPaymentOption('razorpay', 'UPI / Card / Net banking',
-                    LucideIcons.creditCard),
-                const SizedBox(height: 24),
+                _section('Payment method'),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _buildPaymentCard(
+                        value: 'razorpay',
+                        title: 'Pay Online',
+                        subtitle: 'UPI / Card / Wallet',
+                        icon: LucideIcons.smartphone,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildPaymentCard(
+                        value: 'cod',
+                        title: 'Cash on Delivery',
+                        subtitle: 'Pay at doorstep',
+                        icon: LucideIcons.banknote,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _payMethod == 'cod'
+                      ? 'Rider will collect cash when delivering.'
+                      : 'UPI / Cards / Wallets · Secured by Razorpay',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 20),
                 _buildSummary(),
                 if (_error != null) ...<Widget>[
                   const SizedBox(height: 16),
@@ -559,13 +585,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2),
                   )
-                : const Icon(LucideIcons.checkCircle),
+                : Icon(_payMethod == 'cod'
+                    ? LucideIcons.banknote
+                    : LucideIcons.smartphone),
             label: Text(
               _busy
                   ? 'Placing…'
                   : _payMethod == 'cod'
-                      ? 'Place order  •  ₹${_payable.toStringAsFixed(0)}'
-                      : 'Pay  •  ₹${_payable.toStringAsFixed(0)}',
+                      ? 'Place order · ₹${_payable.toStringAsFixed(0)} COD'
+                      : 'Pay ₹${_payable.toStringAsFixed(0)} via Razorpay',
             ),
           ),
         ),
@@ -612,13 +640,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildPaymentOption(String value, String label, IconData icon) {
+  Widget _buildPaymentCard({
+    required String value,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
     final bool selected = _payMethod == value;
     return InkWell(
       onTap: () => setState(() => _payMethod = value),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.brandRed.withValues(alpha: 0.06)
@@ -631,17 +664,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         child: Row(
           children: <Widget>[
-            Icon(icon, color: selected ? AppColors.brandRed : AppColors.textPrimary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? AppColors.brandRed : AppColors.textPrimary,
             ),
-            Radio<String>(
-              value: value,
-              groupValue: _payMethod,
-              activeColor: AppColors.brandRed,
-              onChanged: (String? v) => setState(() => _payMethod = v ?? 'cod'),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: selected
+                          ? AppColors.brandRed
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: (selected
+                              ? AppColors.brandRed
+                              : AppColors.textPrimary)
+                          .withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
