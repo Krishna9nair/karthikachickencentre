@@ -1464,6 +1464,111 @@ async def auth_google_session(payload: GoogleSessionIn, request: Request):
     return response
 
 
+@api_router.post("/auth/google/idtoken")
+async def auth_google_idtoken(request: Request):
+    """Mobile-native Google sign-in.
+
+    The Flutter app uses `google_sign_in` to obtain a Google ID token,
+    then POSTs it here. We verify the ID token against Google's public
+    keys (via `google.oauth2.id_token.verify_oauth2_token`), match the
+    audience to our OAuth Web Client ID, and — on success — mint a
+    server-side `session_token` (same shape used by /auth/login and
+    /auth/google/session).
+
+    The website continues to use /auth/google/session (Emergent-managed
+    redirect flow). Both flows write to the same `user_sessions` table.
+
+    Body:
+        {"id_token": "<google-id-token>", "remember_me": false}
+
+    Returns:
+        {"ok": true, "user": {email, name, picture, phone}, "session_token": "..."}
+    """
+    # Lazy-import the verifier so a stale install doesn't break unrelated routes.
+    from google.oauth2 import id_token as g_id_token  # type: ignore
+    from google.auth.transport import requests as g_requests  # type: ignore
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body")
+    raw_token = (body.get("id_token") or "").strip() if isinstance(body, dict) else ""
+    remember_me = bool(body.get("remember_me", False)) if isinstance(body, dict) else False
+    if not raw_token:
+        raise HTTPException(400, "id_token is required")
+
+    audience = "929626564461-5vqfvp3qes9fg3i8acfuvhivt847i07e.apps.googleusercontent.com"
+    try:
+        # `verify_oauth2_token` checks signature, issuer, expiry, and audience.
+        # `clock_skew_in_seconds=10` matches the Flutter google_sign_in SDK's
+        # default tolerance and avoids spurious failures from clock drift.
+        claims = g_id_token.verify_oauth2_token(
+            raw_token,
+            g_requests.Request(),
+            audience,
+            clock_skew_in_seconds=10,
+        )
+    except ValueError as e:
+        # Includes signature mismatch, expired token, wrong audience, etc.
+        logging.info("google idtoken verify failed: %s", e)
+        raise HTTPException(401, "Invalid Google ID token")
+    except Exception as e:
+        logging.warning("google idtoken verify error: %s", e)
+        raise HTTPException(401, "Invalid Google ID token")
+
+    # Belt-and-braces audience check (verify_oauth2_token already does this,
+    # but if anyone changes the kwargs above this guard still holds).
+    if claims.get("aud") != audience:
+        raise HTTPException(401, "Token audience mismatch")
+    if not claims.get("email_verified"):
+        raise HTTPException(401, "Email is not verified")
+
+    email = (claims.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(401, "Token missing email claim")
+    name = claims.get("name") or claims.get("given_name") or ""
+    picture = claims.get("picture")
+
+    # Look up linked phone from customer_profiles so the mobile UI can
+    # show order history immediately without a follow-up `/customer/profile`
+    # round-trip on first launch.
+    phone: Optional[str] = None
+    try:
+        prof = sb.table("customer_profiles").select("phone").eq(
+            "email", email
+        ).limit(1).execute()
+        if prof.data:
+            phone = prof.data[0].get("phone")
+    except Exception as e:
+        logging.warning("customer_profiles lookup failed: %s", e)
+
+    # Mint session_token (also writes to user_sessions).
+    sess = _issue_customer_session(
+        email=email,
+        name=name,
+        picture=picture,
+        phone=phone,
+        role="customer",
+        remember_me=remember_me,
+    )
+
+    response = JSONResponse({
+        "ok": True,
+        "user": {
+            "email": email,
+            "name": name,
+            "picture": picture,
+            "phone": phone,
+        },
+        "session_token": sess["token"],
+    })
+    # Browsers also get the cookie (so a desktop browser hitting this
+    # endpoint stays signed in across reloads). Mobile clients just
+    # ignore it and read `session_token` from the JSON body.
+    _set_session_cookie(response, sess["token"], sess["ttl_days"])
+    return response
+
+
 @api_router.get("/auth/me")
 async def auth_me(user=Depends(require_customer)):
     return {
