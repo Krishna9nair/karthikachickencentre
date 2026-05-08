@@ -18,6 +18,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Any, Dict
 
+import admin_push
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -992,6 +994,7 @@ async def verify_payment(body: VerifyPaymentIn):
         coupon_used = draft.get("_coupon_used")
         if coupon_used and order_row:
             record_coupon_use(coupon_used, draft["customer_phone"], order_row.get("id"))
+        notify_admins_new_order(order_row)
         return {"ok": True, "order": order_row}
     except Exception as e:
         logging.exception("order insert failed")
@@ -1036,6 +1039,7 @@ async def create_cod_order(payload: CreateOrderIn, request: Request):
         # Record coupon redemption (if any)
         if coupon_used and order_row:
             record_coupon_use(coupon_used, payload.customer_phone, order_row.get("id"))
+        notify_admins_new_order(order_row)
         return {
             "ok": True, "order": order_row,
             "discount_applied": first_order_applied or bool(coupon_used),
@@ -1169,6 +1173,150 @@ async def admin_me(admin: Dict[str, Any] = Depends(require_admin)):
     """Backend-verified admin identity. The frontend's RequireAdmin guard
     calls this on mount so role is never trusted from client state alone."""
     return {"ok": True, "user_id": admin["user_id"], "email": admin["email"]}
+
+
+# ----------------------- Admin push notifications -----------------------
+class FcmTokenIn(BaseModel):
+    token: str = Field(..., min_length=10, max_length=400)
+    platform: str = Field("android", min_length=2, max_length=10)
+    device_label: Optional[str] = Field(None, max_length=80)
+
+
+@api_router.post("/admin/fcm-token")
+async def register_admin_fcm_token(
+    body: FcmTokenIn,
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """Admin app calls this on login + every time the FCM token rotates."""
+    plat = body.platform.lower().strip()
+    if plat not in {"android", "ios", "web"}:
+        plat = "android"
+    try:
+        sb.table("admin_fcm_tokens").upsert({
+            "user_id": admin["user_id"],
+            "token": body.token,
+            "platform": plat,
+            "device_label": body.device_label,
+        }, on_conflict="token").execute()
+        return {"ok": True}
+    except Exception as e:
+        logging.exception("admin fcm token register failed")
+        raise HTTPException(500, f"Could not save token: {e}")
+
+
+@api_router.delete("/admin/fcm-token")
+async def unregister_admin_fcm_token(
+    token: str,
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    try:
+        sb.table("admin_fcm_tokens").delete().eq(
+            "user_id", admin["user_id"]
+        ).eq("token", token).execute()
+        return {"ok": True}
+    except Exception as e:
+        logging.exception("admin fcm token unregister failed")
+        return {"ok": False, "error": str(e)}
+
+
+def _all_admin_fcm_tokens() -> List[str]:
+    try:
+        res = sb.table("admin_fcm_tokens").select("token").execute()
+        return [r["token"] for r in (res.data or []) if r.get("token")]
+    except Exception as e:
+        logging.warning("could not load admin fcm tokens: %s", e)
+        return []
+
+
+def _delete_admin_tokens(tokens: List[str]) -> None:
+    if not tokens:
+        return
+    try:
+        sb.table("admin_fcm_tokens").delete().in_("token", tokens).execute()
+    except Exception as e:
+        logging.warning("could not gc invalid admin tokens: %s", e)
+
+
+def notify_admins_new_order(order_row: Optional[Dict[str, Any]]) -> None:
+    """Broadcast a 'new order' push to every admin device. Best-effort."""
+    if not order_row:
+        return
+    try:
+        tokens = _all_admin_fcm_tokens()
+        if not tokens:
+            return
+        name = order_row.get("customer_name") or "A customer"
+        amount = order_row.get("total_amount") or 0
+        try:
+            amount_str = f"₹{float(amount):.0f}"
+        except Exception:
+            amount_str = f"₹{amount}"
+        result = admin_push.send_to_tokens(
+            tokens=tokens,
+            title="New order received",
+            body=f"{name} placed an order — {amount_str}",
+            data={
+                "type": "new_order",
+                "order_id": str(order_row.get("id") or ""),
+                "amount": str(amount),
+            },
+        )
+        _delete_admin_tokens(result.get("invalid_tokens") or [])
+        if result.get("skipped"):
+            logging.info("admin push skipped: %s", result.get("reason"))
+        else:
+            logging.info("admin push: success=%d failure=%d",
+                         result.get("success_count", 0),
+                         result.get("failure_count", 0))
+    except Exception as e:
+        logging.warning("notify_admins_new_order failed: %s", e)
+
+
+@api_router.get("/admin/orders")
+async def admin_orders(
+    limit: int = 50,
+    status: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """List recent orders for admin dashboard. Newest first."""
+    limit = max(1, min(int(limit), 200))
+    try:
+        q = sb.table("orders").select("*").order("created_at", desc=True).limit(limit)
+        if status:
+            q = q.eq("payment_status", status)
+        res = q.execute()
+        return {"orders": res.data or []}
+    except Exception as e:
+        logging.exception("admin orders fetch failed")
+        raise HTTPException(500, f"Could not load orders: {e}")
+
+
+class AdminOrderStatusIn(BaseModel):
+    status: str = Field(..., min_length=2, max_length=30)
+
+
+@api_router.patch("/admin/orders/{order_id}")
+async def admin_update_order_status(
+    order_id: str,
+    body: AdminOrderStatusIn,
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    allowed = {"cod_pending", "paid", "preparing", "ready",
+               "out_for_delivery", "delivered", "cancelled"}
+    if body.status not in allowed:
+        raise HTTPException(400, f"Invalid status (must be one of {sorted(allowed)})")
+    try:
+        res = sb.table("orders").update({
+            "payment_status": body.status,
+        }).eq("id", order_id).execute()
+        if not res.data:
+            raise HTTPException(404, "Order not found")
+        return {"ok": True, "order": res.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("admin order status update failed")
+        raise HTTPException(500, f"Could not update status: {e}")
 
 
 @api_router.post("/admin/upload-product-image")
