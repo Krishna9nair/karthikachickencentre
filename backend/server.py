@@ -2327,6 +2327,40 @@ async def customer_orders(status: Optional[str] = None, user=Depends(require_cus
     return {"orders": orders}
 
 
+@api_router.get("/customer/orders/{order_id}")
+async def customer_order_detail(order_id: str, user=Depends(require_customer)):
+    """Single order lookup for the mobile 'Track this order' screen.
+
+    Returns the order if and only if it belongs to the authenticated
+    customer. Phone match is normalized (digits only, 10-digit suffix)
+    to handle stored variations like '+919619417452', '919619417452',
+    or '9619417452' all matching the same user.
+
+    404 → order doesn't exist OR doesn't belong to this user (we don't
+    distinguish, to avoid leaking which IDs exist).
+    """
+    if not user.get("phone"):
+        raise HTTPException(400, "Link a phone first")
+    try:
+        res = sb.table("orders").select(
+            "id, customer_name, customer_phone, customer_address, items, total_amount, "
+            "payment_status, notes, created_at, delivery_slot_date, delivery_slot_start, "
+            "delivery_slot_end, cancelled_at, cancelled_by"
+        ).eq("id", order_id).limit(1).execute()
+    except Exception as e:
+        raise HTTPException(500, f"Lookup failed: {e}")
+    row = res.data[0] if res.data else None
+    if not row:
+        raise HTTPException(404, "Order not found")
+    # Normalize both sides to the last 10 digits before comparing.
+    def _last10(s: str) -> str:
+        digits = "".join(ch for ch in (s or "") if ch.isdigit())
+        return digits[-10:] if len(digits) >= 10 else digits
+    if _last10(row.get("customer_phone", "")) != _last10(user["phone"]):
+        raise HTTPException(404, "Order not found")
+    return {"order": row}
+
+
 class CancelOrderIn(BaseModel):
     reason: Optional[str] = Field(None, max_length=200)
 
